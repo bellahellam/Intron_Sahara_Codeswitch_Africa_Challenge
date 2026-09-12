@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma, fromJsonColumn } from "@/lib/db";
+import { canAccessChp } from "@/lib/auth/session";
+import { accessDenied, authenticationRequired, getRequestAuth } from "@/lib/auth/guard";
 
 export const runtime = "nodejs";
 
 /** One persisted record, for S7 / S8 and for re-opening from the home list. */
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = getRequestAuth(req);
+  if (!auth) return authenticationRequired();
   // Next 16: route params arrive as a Promise and must be awaited before use.
   const { id } = await params;
   const record = await prisma.screeningRecord.findUnique({
@@ -18,19 +22,26 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       { status: 404 },
     );
   }
+  if (!canAccessChp(auth, record.chpCode)) return accessDenied();
 
-  return NextResponse.json({
+  const response = {
     id: record.id,
     motherName: record.mother.displayName,
     chpCode: record.chpCode,
     createdAt: record.createdAt,
     scores: fromJsonColumn(record.scoresJson, {}),
-    items: fromJsonColumn(record.itemsJson, []),
     risk: fromJsonColumn(record.riskJson, {}),
     referral: fromJsonColumn(record.referralJson, {}),
-    asr: fromJsonColumn(record.asrJson, {}),
     disclaimers: fromJsonColumn(record.disclaimersJson, []),
     handoverEn: record.handoverEn,
     backReadSw: record.backReadSw,
-  });
+    // Detailed extraction and ASR metadata are operational data. The field workflow does not
+    // need them, so they are returned only to an authenticated administrator.
+    ...(auth.role === "admin" ? {
+      items: fromJsonColumn(record.itemsJson, []),
+      asr: fromJsonColumn(record.asrJson, {}),
+    } : {}),
+  };
+
+  return NextResponse.json(response);
 }

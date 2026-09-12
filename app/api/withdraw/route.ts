@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, bumpAnonymousCounter } from "@/lib/db";
+import { canAccessChp } from "@/lib/auth/session";
+import { accessDenied, authenticationRequired, getRequestAuth } from "@/lib/auth/guard";
 
 export const runtime = "nodejs";
 
@@ -20,6 +22,8 @@ export const runtime = "nodejs";
  * to her before the withdrawal option is offered.
  */
 export async function POST(req: Request) {
+  const auth = getRequestAuth(req);
+  if (!auth) return authenticationRequired();
   const body = (await req.json().catch(() => null)) as { sessionId?: string } | null;
   if (!body?.sessionId) {
     return NextResponse.json(
@@ -30,6 +34,7 @@ export async function POST(req: Request) {
 
   const session = await prisma.session.findUnique({ where: { id: body.sessionId } });
   if (!session) return NextResponse.json({ ok: true, alreadyGone: true });
+  if (!canAccessChp(auth, session.chpCode)) return accessDenied();
 
   if (session.escalated) await bumpAnonymousCounter("withdrawn_after_escalation");
   else await bumpAnonymousCounter("withdrawn");

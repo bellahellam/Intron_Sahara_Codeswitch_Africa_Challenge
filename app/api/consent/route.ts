@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma, audit, bumpAnonymousCounter } from "@/lib/db";
 import { CONSENT_SCRIPT_VERSION } from "@/lib/consent";
+import { canAccessChp } from "@/lib/auth/session";
+import { accessDenied, authenticationRequired, getRequestAuth } from "@/lib/auth/guard";
 
 export const runtime = "nodejs";
 
@@ -12,6 +14,8 @@ export const runtime = "nodejs";
  * The mother record created on S2 is deleted, which cascades the session away with it.
  */
 export async function POST(req: Request) {
+  const auth = getRequestAuth(req);
+  if (!auth) return authenticationRequired();
   const body = (await req.json().catch(() => null)) as {
     sessionId?: string;
     granted?: boolean;
@@ -34,6 +38,7 @@ export async function POST(req: Request) {
       { status: 404 },
     );
   }
+  if (!canAccessChp(auth, session.chpCode)) return accessDenied();
 
   if (!body.granted) {
     // Write the counter BEFORE the delete, so a crash between the two loses the count rather

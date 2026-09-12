@@ -49,74 +49,109 @@ export default function Result({ params }: { params: Promise<{ recordId: string 
 
   if (!data) {
     return (
-      <main className="min-h-screen p-4">
+      <main className="flex min-h-full flex-col">
         <Header title="Matokeo" />
-        <p className="text-neutral-500">Inapakia...</p>
+        <div className="flex flex-1 items-center justify-center p-8">
+          <div className="space-y-3 text-center">
+            <div className="mx-auto h-9 w-9 animate-pulse rounded-full border-4 border-primary/15 border-t-primary" aria-hidden />
+            <p className="text-neutral-500">Inapakia...</p>
+          </div>
+        </div>
       </main>
     );
   }
 
   const { scores, referral } = data;
 
+  const tierConfig: Record<string, { color: string; bg: string; bar: string }> = {
+    facility_urgent:  { color: "text-danger",  bg: "border-danger/30 bg-danger/5", bar: "bg-danger"  },
+    facility_routine: { color: "text-warning", bg: "border-warning/30 bg-warning/5", bar: "bg-warning" },
+    chp_followup:     { color: "text-primary", bg: "border-primary/30 bg-primary/5", bar: "bg-primary" },
+  };
+  const tier = tierConfig[referral.tier] ?? tierConfig.chp_followup;
+
   return (
-    <main className="flex min-h-screen flex-col pb-8">
+    <main className="flex min-h-full flex-col pb-8">
       <Header title="Matokeo" />
 
-      <div className="flex-1 space-y-5 px-4">
+      <div className="flex-1 space-y-4 px-4 pt-2">
         {data.risk.flagged && (
-          <div className="rounded-lg border-2 border-danger bg-white p-4">
-            <p className="font-semibold text-danger">Alama ya hatari ilitolewa katika kikao hiki.</p>
-            <p className="gloss not-italic">
-              A safety escalation occurred in this session. This cannot be lowered by any later edit.
-            </p>
+          <div className="flex items-start gap-3 rounded-xl border-2 border-danger/40
+                          bg-danger/5 p-4">
+            <svg viewBox="0 0 20 20" fill="none" className="mt-0.5 h-5 w-5 shrink-0 text-danger" aria-hidden>
+              <path d="M10 3l7 13H3L10 3zM10 7v4m0 2v.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <div>
+              <p className="font-bold text-danger">Alama ya hatari ilitolewa katika kikao hiki.</p>
+              <p className="text-xs text-neutral-500 mt-0.5 italic">
+                A safety escalation occurred. This cannot be lowered by any later edit.
+              </p>
+            </div>
           </div>
         )}
 
-        {/* Word first, number second. */}
-        <section className="card space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-neutral-700">PHQ-9</span>
-            <BandChip label={PHQ9_BAND_LABELS_SW[scores.phq9Band]} total={scores.phq9} />
+        {/* Scores */}
+        <section className="card space-y-3">
+          <p className="section-label">Matokeo ya uchunguzi</p>
+
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: "PHQ-9", band: PHQ9_BAND_LABELS_SW[scores.phq9Band], total: scores.phq9 },
+              { label: "GAD-7", band: GAD7_BAND_LABELS_SW[scores.gad7Band], total: scores.gad7 },
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl bg-neutral-50 border border-neutral-100 p-3">
+                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">{s.label}</p>
+                <p className="mt-1 text-lg font-bold text-neutral-900">{s.band}</p>
+                <p className="tabular text-sm text-neutral-500">({s.total})</p>
+              </div>
+            ))}
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-neutral-700">GAD-7</span>
-            <BandChip label={GAD7_BAND_LABELS_SW[scores.gad7Band]} total={scores.gad7} />
+
+          <div className="rounded-xl bg-neutral-50 border border-neutral-100 px-3 py-2.5">
+            <p className="tabular text-sm text-neutral-600">
+              PHQ-2 <strong>{scores.phq2}</strong> · GAD-2 <strong>{scores.gad2}</strong>
+              <span className="text-neutral-400"> · kizingiti 3</span>
+            </p>
+            <p className="text-xs text-neutral-400 mt-1">
+              {scores.coverage.phq9ItemsEvidenced}/9 PHQ-9 · {scores.coverage.gad7ItemsEvidenced}/7 GAD-7 evidenced
+            </p>
           </div>
-          <p className="tabular text-sm text-neutral-500">
-            PHQ-2 {scores.phq2} · GAD-2 {scores.gad2} · kizingiti 3
-            <span className="gloss block not-italic">
-              PHQ-9 is scored 0–27 and GAD-7 0–21. The PHQ-2 / GAD-2 threshold of 3 matches the
-              IPMH trial running in Western Kenya, so this output feeds a pathway that exists.
-            </span>
-          </p>
-          <p className="tabular text-sm text-neutral-700">
-            Vipengele vilivyopatikana: {scores.coverage.phq9ItemsEvidenced}/9 PHQ-9 ·{" "}
-            {scores.coverage.gad7ItemsEvidenced}/7 GAD-7
-          </p>
+
           {referral.incomplete && (
-            <p className="text-sm font-medium text-warning">
-              ! Uchunguzi haukukamilika.
-              <span className="gloss block not-italic">
-                The screen was not completed, and the record says so.
-              </span>
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-warning">
+              <span aria-hidden>!</span>
+              Uchunguzi haukukamilika.
+              <span className="gloss not-italic font-normal ml-1">Screen not completed.</span>
             </p>
           )}
         </section>
 
-        <section className="card space-y-2">
-          <p className="text-xs uppercase tracking-wide text-neutral-500">Rufaa</p>
-          <p className="text-lg font-semibold text-neutral-900">{TIER_LABELS_SW[referral.tier]}</p>
+        {/* Referral */}
+        <section className={`card space-y-2 border ${tier.bg}`}>
+          <div className="flex items-center gap-3">
+            <span className={`h-9 w-1 rounded-full ${tier.bar}`} aria-hidden />
+            <div>
+              <p className="section-label">Rufaa</p>
+              <p className={`text-lg font-bold ${tier.color}`}>
+                {TIER_LABELS_SW[referral.tier]}
+              </p>
+            </div>
+          </div>
           <p className="text-sm text-neutral-700">{referral.reasonSw}</p>
-          <p className="gloss not-italic">{referral.reason}</p>
+          <p className="text-xs italic text-neutral-400">{referral.reason}</p>
         </section>
 
-        {/* Both disclaimers, verbatim, never paraphrased. */}
         <DisclaimerStrip withValidation />
       </div>
 
-      <div className="px-4 pt-6">
+      <div className="px-4 pt-4">
         <PrimaryButton onClick={() => router.push(`/rufaa/${recordId}`)}>
-          {COPY.buttons.sendReferral.sw}
+          <span className="flex items-center justify-center gap-2">
+            {COPY.buttons.sendReferral.sw}
+            <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4" aria-hidden>
+              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
         </PrimaryButton>
       </div>
     </main>

@@ -4,6 +4,8 @@ import { getASRAdapter, transcribeWithRetry, ASRError } from "@/lib/asr";
 import { processTurn } from "@/lib/agent/orchestrator";
 import { emptyCoverage, type CoverageMap } from "@/lib/clinical/coverage";
 import type { ConstructId } from "@/lib/clinical/constructs";
+import { canAccessChp } from "@/lib/auth/session";
+import { accessDenied, authenticationRequired, getRequestAuth } from "@/lib/auth/guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -21,6 +23,8 @@ interface ProbeRecord {
  * that persists it, which is a stronger guarantee than deleting it afterwards.
  */
 export async function POST(req: Request) {
+  const auth = getRequestAuth(req);
+  if (!auth) return authenticationRequired();
   const form = await req.formData().catch(() => null);
   const sessionId = form?.get("sessionId");
   const audio = form?.get("audio");
@@ -48,6 +52,7 @@ export async function POST(req: Request) {
       { status: 404 },
     );
   }
+  if (!canAccessChp(auth, session.chpCode)) return accessDenied();
 
   // ===================================================================================
   // FR-03 CONSENT GATE. Server-side, not only in the UI.
