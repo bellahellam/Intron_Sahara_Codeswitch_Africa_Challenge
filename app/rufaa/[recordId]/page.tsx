@@ -13,12 +13,13 @@
  */
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { COPY } from "@/lib/copy";
 import { DisclaimerStrip, Header } from "@/components/ui";
 
-export default function Handover({ params }: { params: { recordId: string } }) {
-  const { recordId } = params;
+export default function Handover({ params }: { params: Promise<{ recordId: string }> }) {
+  // Next 16 delivers route params as a Promise; `use` unwraps it in a client component.
+  const { recordId } = use(params);
   const [handover, setHandover] = useState<string | null>(null);
   const [withheld, setWithheld] = useState(false);
   const [copied, setCopied] = useState(false);

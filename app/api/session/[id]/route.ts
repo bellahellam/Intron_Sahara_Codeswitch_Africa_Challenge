@@ -5,9 +5,11 @@ import { emptyCoverage } from "@/lib/clinical/coverage";
 export const runtime = "nodejs";
 
 /** Session state for S6, which must render every item accumulated across turns. */
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  // Next 16: route params arrive as a Promise and must be awaited before use.
+  const { id } = await params;
   const session = await prisma.session.findUnique({
-    where: { id: params.id },
+    where: { id: id },
     include: { turns: { orderBy: { idx: "asc" } }, mother: { select: { displayName: true } } },
   });
 

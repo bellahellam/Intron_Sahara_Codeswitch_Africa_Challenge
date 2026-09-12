@@ -1,0 +1,28 @@
+{
+  "floor": 7.51,
+  "derived": true,
+  "provenance": "5th percentile of characters-per-second over the 12 gold transcripts of intronhealth/AfriSwitchCare config 'swahili' split 'test', minus a 10% safety margin. Durations are the dataset's own `duration` column. Derived by bench/derive_floor.py.",
+  "percentile": 5,
+  "safety_margin_fraction": 0.1,
+  "p5_cps": 8.34,
+  "min_cps": 8.28,
+  "median_cps": 8.94,
+  "max_cps": 10.15,
+  "n": 12,
+  "derived_at": "2026-09-12",
+  "caveat": "These are two-party consultations of 6-11 minutes; the product measures single-speaker turns of 20-110 seconds. Conversational pauses and turn-taking are included in the denominator here and are not in a product turn, so this floor is a conservative estimate rather than a like-for-like one. Recalibrate on field set C once it is recorded, which is single-speaker and matches the product's unit exactly.",
+  "per_case_cps": {
+    "Acute Appendicitis": 10.15,
+    "Asthma": 8.4,
+    "Bronchopneumonia": 8.28,
+    "Depression": 9.14,
+    "Diabetes Mellitus": 9.49,
+    "Drug-induced Psychosis": 8.61,
+    "Febrile Convulsion": 9.69,
+    "Hypertension": 9.47,
+    "Osteoarthritis": 8.6,
+    "PID": 9.28,
+    "Stroke": 8.74,
+    "Tuberculosis": 8.65
+  }
+}

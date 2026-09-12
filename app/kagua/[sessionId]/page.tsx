@@ -15,7 +15,7 @@
  */
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { COPY } from "@/lib/copy";
 import { Header, PrimaryButton, ErrorCard } from "@/components/ui";
 import { EvidenceCard, type EvidenceItem } from "@/components/EvidenceCard";
@@ -23,8 +23,9 @@ import { bandForConfidence } from "@/lib/clinical/coverage";
 
 type Stage = "confirm" | "backread";
 
-export default function Review({ params }: { params: { sessionId: string } }) {
-  const { sessionId } = params;
+export default function Review({ params }: { params: Promise<{ sessionId: string }> }) {
+  // Next 16 delivers route params as a Promise; `use` unwraps it in a client component.
+  const { sessionId } = use(params);
   const router = useRouter();
 
   const [items, setItems] = useState<EvidenceItem[]>([]);

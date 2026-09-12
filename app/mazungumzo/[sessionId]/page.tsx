@@ -14,7 +14,7 @@
  */
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 import { COPY } from "@/lib/copy";
 import { formatElapsed, useRecorder, WARN_AT_MS } from "@/components/useRecorder";
 import { AmplitudeMeter, CoverageStrip, ErrorCard, Header, RecordControl } from "@/components/ui";
@@ -41,8 +41,9 @@ interface TurnResponse {
   droppedCount: number;
 }
 
-export default function Conversation({ params }: { params: { sessionId: string } }) {
-  const { sessionId } = params;
+export default function Conversation({ params }: { params: Promise<{ sessionId: string }> }) {
+  // Next 16 delivers route params as a Promise; `use` unwraps it in a client component.
+  const { sessionId } = use(params);
   const router = useRouter();
 
   const [phase, setPhase] = useState<Phase>("idle");

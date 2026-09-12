@@ -16,12 +16,13 @@
  */
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { use, useState } from "react";
 import { COPY } from "@/lib/copy";
 import { Header } from "@/components/ui";
 
-export default function Consent({ params }: { params: { sessionId: string } }) {
-  const { sessionId } = params;
+export default function Consent({ params }: { params: Promise<{ sessionId: string }> }) {
+  // Next 16 delivers route params as a Promise; `use` unwraps it in a client component.
+  const { sessionId } = use(params);
   const router = useRouter();
   const [retainAudio, setRetainAudio] = useState(false);
   const [busy, setBusy] = useState<"agree" | "decline" | null>(null);

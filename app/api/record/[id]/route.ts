@@ -4,9 +4,11 @@ import { prisma, fromJsonColumn } from "@/lib/db";
 export const runtime = "nodejs";
 
 /** One persisted record, for S7 / S8 and for re-opening from the home list. */
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  // Next 16: route params arrive as a Promise and must be awaited before use.
+  const { id } = await params;
   const record = await prisma.screeningRecord.findUnique({
-    where: { id: params.id },
+    where: { id: id },
     include: { mother: { select: { displayName: true } } },
   });
 
