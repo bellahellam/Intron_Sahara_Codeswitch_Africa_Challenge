@@ -43,11 +43,19 @@ Two properties of this data, both verified rather than taken from the card:
 
 | Model | WER ↓ | CER ↓ | **EESR ↑** | **EESR-clinical ↑** | CIR ↑ | CMI-Δ ↓ | p95 latency/chunk | Failed chunks |
 |---|---|---|---|---|---|---|---|---|
-| `whisper-large-v3-sw` | 0.287 | 0.179 | 83.3% | — | — | 13.720 | — ms | 0 |
+| `whisper-large-v3-auto` | 0.332 | 0.149 | 82.5% | 93.3% | 1/1 | 3.368 | 42894 ms | 0 |
+| `whisper-large-v3-sw` | 0.344 | 0.160 | 81.0% | 93.3% | 1/1 | 5.813 | 24976 ms | 0 |
 
-EESR is computed over 36 embedded-English spans
-and EESR-clinical over the 0 of those
+EESR is computed over 616 embedded-English spans
+and EESR-clinical over the 15 of those
 containing an affective term.
+
+**CIR and SPR are shown as raw counts, not percentages, and they are not results.** This
+corpus contains 1 instance(s) of any documented
+idiom and 1 of any safety phrase across all 12
+conversations — simulated consultations for physical conditions simply do not contain the
+distress vocabulary this product exists to catch. A rate over n=1 is not a rate. Both
+metrics need field set C, which is written to carry them deliberately.
 
 ## What EESR measures, and why WER alone is misleading
 
@@ -106,7 +114,30 @@ against the monolingual number.
 
 | Conversation | Model | WER | EESR | EESR-clinical | CIR |
 |---|---|---|---|---|---|
-| Acute Appendicitis | `whisper-large-v3-sw` | 0.287 | 83.3% | — | — |
+| Acute Appendicitis | `whisper-large-v3-auto` | 0.218 | 86.1% | — | — |
+| Acute Appendicitis | `whisper-large-v3-sw` | 0.277 | 83.3% | — | — |
+| Asthma | `whisper-large-v3-auto` | 0.293 | 82.0% | — | — |
+| Asthma | `whisper-large-v3-sw` | 0.293 | 82.0% | — | — |
+| Bronchopneumonia | `whisper-large-v3-auto` | 0.417 | 65.4% | — | — |
+| Bronchopneumonia | `whisper-large-v3-sw` | 0.370 | 69.2% | — | — |
+| Depression | `whisper-large-v3-auto` | 0.308 | 83.9% | 100.0% | 100.0% |
+| Depression | `whisper-large-v3-sw` | 0.337 | 79.0% | 100.0% | 100.0% |
+| Diabetes Mellitus | `whisper-large-v3-auto` | 0.443 | 81.0% | 100.0% | — |
+| Diabetes Mellitus | `whisper-large-v3-sw` | 0.449 | 81.0% | 100.0% | — |
+| Drug-induced Psychosis | `whisper-large-v3-auto` | 0.371 | 91.1% | 100.0% | — |
+| Drug-induced Psychosis | `whisper-large-v3-sw` | 0.399 | 91.1% | 100.0% | — |
+| Febrile Convulsion | `whisper-large-v3-auto` | 0.424 | 80.2% | — | — |
+| Febrile Convulsion | `whisper-large-v3-sw` | 0.479 | 75.5% | — | — |
+| Hypertension | `whisper-large-v3-auto` | 0.329 | 81.2% | 50.0% | — |
+| Hypertension | `whisper-large-v3-sw` | 0.317 | 81.2% | 50.0% | — |
+| Osteoarthritis | `whisper-large-v3-auto` | 0.316 | 83.9% | — | — |
+| Osteoarthritis | `whisper-large-v3-sw` | 0.316 | 83.9% | — | — |
+| PID | `whisper-large-v3-auto` | 0.258 | 88.3% | 100.0% | — |
+| PID | `whisper-large-v3-sw` | 0.279 | 86.7% | 100.0% | — |
+| Stroke | `whisper-large-v3-auto` | 0.341 | 77.8% | — | — |
+| Stroke | `whisper-large-v3-sw` | 0.341 | 77.8% | — | — |
+| Tuberculosis | `whisper-large-v3-auto` | 0.261 | 87.5% | 100.0% | — |
+| Tuberculosis | `whisper-large-v3-sw` | 0.274 | 84.4% | 100.0% | — |
 
 Raw per-sample output, including every hypothesis transcript, is in
 `results/afriswitchcare_sw/`. Every number above is auditable back to a transcript.

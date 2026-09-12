@@ -17,10 +17,12 @@
 import Link from "next/link";
 import { Header } from "@/components/ui";
 import results from "@/data/benchmark_results.json";
+import { requireAdmin } from "@/lib/auth";
 
 export const metadata = { title: "Kwa nini Sahara? — MAMA-SAUTI" };
 
-export default function WhySahara() {
+export default async function WhySahara() {
+  await requireAdmin();
   const hasResults = Array.isArray(results.table1) && results.table1.length > 0;
 
   return (

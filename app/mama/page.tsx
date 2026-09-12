@@ -84,94 +84,130 @@ export default function MotherIdentity() {
   const canContinue = anonymous || name.trim().length > 0;
 
   return (
-    <main className="flex min-h-screen flex-col pb-8">
-      <Header title="Mama" back="/" />
+    <main className="flex min-h-full flex-col pb-8">
+      <Header title="Mama mpya" back="/" />
 
-      <div className="flex-1 space-y-5 px-4">
+      <div className="flex-1 space-y-5 px-4 pt-4">
         {recent.length > 0 && (
           <section>
-            <h2 className="text-sm font-medium text-neutral-700">
-              Akina mama wa hivi karibuni <span className="gloss">(recent mothers)</span>
-            </h2>
-            <ul className="mt-2 space-y-2">
+            <p className="section-label mb-2">
+              Mama wa hivi karibuni <span className="normal-case font-normal text-neutral-400">(recent)</span>
+            </p>
+            <ul className="space-y-2">
               {recent.map((m) => (
                 <li key={m.id}>
                   <button
                     type="button"
-                    className="card flex w-full items-center justify-between text-left"
+                    className="card flex w-full items-center gap-3 text-left
+                               hover:border-neutral-300 hover:shadow-sm transition-all"
                     onClick={() => startSession(m.id)}
                     disabled={busy}
                   >
-                    <span className="font-medium text-neutral-900">{m.displayName}</span>
-                    {m.age !== null && <span className="tabular text-sm text-neutral-500">{m.age}</span>}
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center
+                                    rounded-lg bg-primary/10 text-xs font-bold text-primary">
+                      {m.displayName.slice(0, 2).toUpperCase()}
+                    </div>
+                    <span className="flex-1 font-semibold text-neutral-900">{m.displayName}</span>
+                    {m.age !== null && (
+                      <span className="tabular text-sm text-neutral-400">{m.age} yrs</span>
+                    )}
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+                         className="text-neutral-300 shrink-0" aria-hidden>
+                      <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5"
+                            strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                   </button>
                 </li>
               ))}
             </ul>
+            <div className="flex items-center gap-3 my-4">
+              <div className="flex-1 h-px bg-neutral-200" />
+              <span className="text-xs text-neutral-400 font-medium">au mama mpya</span>
+              <div className="flex-1 h-px bg-neutral-200" />
+            </div>
           </section>
         )}
 
-        <section className="space-y-4">
+        <section className="card space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-neutral-700">
-              Jina <span className="gloss">(name)</span>
+            <label htmlFor="name" className="block text-sm font-semibold text-neutral-700 mb-1">
+              Jina <span className="gloss not-italic font-normal">(name)</span>
             </label>
             <input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={anonymous}
-              className="mt-1 h-12 w-full rounded-lg border border-neutral-200 px-3 text-base disabled:bg-neutral-200"
+              placeholder="Amina Hassan"
+              className="h-12 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 text-base
+                         focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20
+                         disabled:bg-neutral-100 disabled:text-neutral-400 transition-colors"
             />
           </div>
 
           <div>
-            <label htmlFor="age" className="block text-sm font-medium text-neutral-700">
-              Umri <span className="gloss">(age)</span>
+            <label htmlFor="age" className="block text-sm font-semibold text-neutral-700 mb-1">
+              Umri <span className="gloss not-italic font-normal">(age)</span>
             </label>
             <input
               id="age"
               inputMode="numeric"
               value={age}
               onChange={(e) => onAgeChange(e.target.value)}
-              className="tabular mt-1 h-12 w-full rounded-lg border border-neutral-200 px-3 text-base"
+              placeholder="22"
+              className="tabular h-12 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 text-base
+                         focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
             />
-            {ageWarning && <p className="mt-1 text-sm text-warning">! {ageWarning}</p>}
+            {ageWarning && (
+              <p className="mt-1.5 flex items-center gap-1 text-sm text-warning font-medium">
+                <span aria-hidden>!</span> {ageWarning}
+              </p>
+            )}
           </div>
 
-          <label className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={anonymous}
-              onChange={(e) => setAnonymous(e.target.checked)}
-              className="h-6 w-6 rounded border-neutral-500"
-            />
-            <span className="text-base text-neutral-900">
-              {COPY.buttons.anonymous.sw} <span className="gloss">(anonymous)</span>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <div className="relative flex h-6 w-6 shrink-0 items-center justify-center">
+              <input
+                type="checkbox"
+                checked={anonymous}
+                onChange={(e) => setAnonymous(e.target.checked)}
+                className="h-5 w-5 rounded border-neutral-300 text-primary
+                           focus:ring-primary focus:ring-offset-0"
+              />
+            </div>
+            <span className="text-base text-neutral-800">
+              {COPY.buttons.anonymous.sw}
+              <span className="gloss block not-italic text-sm font-normal">
+                Anonymous — initials only
+              </span>
             </span>
           </label>
-
-          <p className="text-sm text-neutral-500">
-            Majina hayatokani na sauti — yanaandikwa hapa tu.
-            <br />
-            <span className="gloss">Names are never taken from audio. They are typed here only.</span>
-          </p>
         </section>
 
+        <p className="flex items-start gap-2 text-sm text-neutral-500 px-1">
+          <svg aria-hidden viewBox="0 0 18 18" fill="none" className="mt-0.5 h-4 w-4 shrink-0 text-primary">
+            <path d="M3 3.5h12v11H3zM5.5 7h7M5.5 10h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          <span>
+            Majina hayatokani na sauti — yanaandikwa hapa tu.
+            <span className="gloss block not-italic">Names are never taken from audio.</span>
+          </span>
+        </p>
+
         {error && (
-          <div className="rounded-lg border-2 border-danger bg-white p-4">
-            <p className="font-medium text-danger">{error}</p>
+          <div className="info-strip-danger">
+            <p className="text-sm font-semibold text-danger">{error}</p>
           </div>
         )}
       </div>
 
-      <div className="px-4 pt-6">
+      <div className="px-4 pt-4">
         <PrimaryButton
           onClick={() => startSession()}
           disabled={!canContinue || busy}
           disabledReason={!canContinue ? "Andika jina, au chagua 'Bila jina'." : undefined}
         >
-          {COPY.buttons.continue.sw}
+          {busy ? "Inaanzisha..." : COPY.buttons.continue.sw}
         </PrimaryButton>
       </div>
     </main>

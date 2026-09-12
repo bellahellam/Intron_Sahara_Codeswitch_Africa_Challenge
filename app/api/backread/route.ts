@@ -6,6 +6,8 @@ import { isConstructId, type ConstructId } from "@/lib/clinical/constructs";
 import { bandForConfidence } from "@/lib/clinical/coverage";
 import { generateBackRead } from "@/lib/agent/summarise";
 import { dedupeQuotes } from "@/lib/agent/quotes";
+import { canAccessChp } from "@/lib/auth/session";
+import { accessDenied, authenticationRequired, getRequestAuth } from "@/lib/auth/guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -19,6 +21,8 @@ export const maxDuration = 60;
  * be able to change what gets stored — which it cannot if the row already exists.
  */
 export async function POST(req: Request) {
+  const auth = getRequestAuth(req);
+  if (!auth) return authenticationRequired();
   const body = (await req.json().catch(() => null)) as {
     sessionId?: string;
     items?: Array<{ construct: string; evidence_span: string; confirmed: boolean; disputed: boolean }>;
@@ -42,6 +46,7 @@ export async function POST(req: Request) {
       { status: 404 },
     );
   }
+  if (!canAccessChp(auth, session.chpCode)) return accessDenied();
 
   const stored = session.turns.flatMap((t) => {
     const extraction = fromJsonColumn<{

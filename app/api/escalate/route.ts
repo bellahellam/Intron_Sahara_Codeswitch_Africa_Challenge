@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, audit } from "@/lib/db";
+import { canAccessChp } from "@/lib/auth/session";
+import { accessDenied, authenticationRequired, getRequestAuth } from "@/lib/auth/guard";
 
 export const runtime = "nodejs";
 
@@ -15,6 +17,8 @@ export const runtime = "nodejs";
  * un-done by that, and no later edit can lower the tier (§11.8 rule 1).
  */
 export async function POST(req: Request) {
+  const auth = getRequestAuth(req);
+  if (!auth) return authenticationRequired();
   const body = (await req.json().catch(() => null)) as {
     sessionId?: string;
     source?: "manual" | "llm_risk_flag";
@@ -37,6 +41,7 @@ export async function POST(req: Request) {
       { status: 404 },
     );
   }
+  if (!canAccessChp(auth, session.chpCode)) return accessDenied();
 
   if (body.acknowledged) {
     await audit(session.id, "escalation_ack", { quoteSuppressed: body.quoteSuppressed === true });

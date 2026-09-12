@@ -1,5 +1,5 @@
 {
-  "_status": "Run on 1 AfriSwitchCare Swahili conversations. Tier 3 (band-flip) is NOT reported: it is degenerate on this dataset by construction (spec section 18.5a) and requires field set C, which is not yet recorded.",
+  "_status": "Run on 12 AfriSwitchCare Swahili conversations. Tier 3 (band-flip) is NOT reported: it is degenerate on this dataset by construction (spec section 18.5a) and requires field set C, which is not yet recorded.",
   "generated_at": "2026-09-12",
   "datasets": {
     "A": {
@@ -17,19 +17,34 @@
   },
   "table1": [
     {
+      "model": "whisper-large-v3-auto",
+      "wer": 0.3316,
+      "cer": 0.1487,
+      "eesr": 0.8247,
+      "eesr_clinical": 0.9333,
+      "eesr_clinical_total": 15,
+      "cir": 1.0,
+      "cir_total": 1,
+      "spr": 1.0,
+      "spr_total": 1,
+      "cmi_delta": 3.3675,
+      "latency_ms_p95_per_chunk": 42894,
+      "n": 12
+    },
+    {
       "model": "whisper-large-v3-sw",
-      "wer": 0.2869,
-      "cer": 0.1789,
-      "eesr": 0.8333,
-      "eesr_clinical": null,
-      "eesr_clinical_total": 0,
-      "cir": null,
-      "cir_total": 0,
-      "spr": null,
-      "spr_total": 0,
-      "cmi_delta": 13.72,
-      "latency_ms_p95_per_chunk": null,
-      "n": 1
+      "wer": 0.3443,
+      "cer": 0.1604,
+      "eesr": 0.8101,
+      "eesr_clinical": 0.9333,
+      "eesr_clinical_total": 15,
+      "cir": 1.0,
+      "cir_total": 1,
+      "spr": 1.0,
+      "spr_total": 1,
+      "cmi_delta": 5.8133,
+      "latency_ms_p95_per_chunk": 24976,
+      "n": 12
     }
   ],
   "table2": [],
