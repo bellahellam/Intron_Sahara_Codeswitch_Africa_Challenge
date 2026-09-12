@@ -17,17 +17,17 @@
   },
   "table1": [
     {
-      "model": "sahara-v2.5-corr-off",
-      "wer": 0.1719,
-      "cer": 0.1199,
-      "eesr": 0.6389,
+      "model": "whisper-large-v3-sw",
+      "wer": 0.2869,
+      "cer": 0.1789,
+      "eesr": 0.8333,
       "eesr_clinical": null,
       "eesr_clinical_total": 0,
       "cir": null,
       "cir_total": 0,
       "spr": null,
       "spr_total": 0,
-      "cmi_delta": 8.04,
+      "cmi_delta": 13.72,
       "latency_ms_p95_per_chunk": null,
       "n": 1
     }

@@ -43,7 +43,7 @@ Two properties of this data, both verified rather than taken from the card:
 
 | Model | WER ↓ | CER ↓ | **EESR ↑** | **EESR-clinical ↑** | CIR ↑ | CMI-Δ ↓ | p95 latency/chunk | Failed chunks |
 |---|---|---|---|---|---|---|---|---|
-| `sahara-v2.5-corr-off` | 0.172 | 0.120 | 63.9% | — | — | 8.040 | — ms | 0 |
+| `whisper-large-v3-sw` | 0.287 | 0.179 | 83.3% | — | — | 13.720 | — ms | 0 |
 
 EESR is computed over 36 embedded-English spans
 and EESR-clinical over the 0 of those
@@ -106,7 +106,7 @@ against the monolingual number.
 
 | Conversation | Model | WER | EESR | EESR-clinical | CIR |
 |---|---|---|---|---|---|
-| Acute Appendicitis | `sahara-v2.5-corr-off` | 0.172 | 63.9% | — | — |
+| Acute Appendicitis | `whisper-large-v3-sw` | 0.287 | 83.3% | — | — |
 
 Raw per-sample output, including every hypothesis transcript, is in
 `results/afriswitchcare_sw/`. Every number above is auditable back to a transcript.
