@@ -55,6 +55,12 @@ model Session {
   scriptVersion  String?
   audioRetained  Boolean   @default(false)
 
+  // SEPARATE from audioRetained, and separately consented to. Keeping the transcript for demo and
+  // research changes who sees her words, so it is its own question with its own script — bundling
+  // it into the main consent would make the main consent untrue (see lib/copy.ts
+  // researchConsentScript). Default false; withdrawal still destroys everything.
+  transcriptRetained Boolean @default(false)
+
   languageProfileJson String? // { sw, en, sheng, unknown }
   coverageJson        String? // construct -> CoverageState
   probeIssuedJson     String? // turnIndex -> probe text, for known-prompt suppression (FR-11a)

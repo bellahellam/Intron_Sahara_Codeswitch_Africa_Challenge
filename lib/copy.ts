@@ -71,6 +71,23 @@ export const COPY = {
     en: "I'd like us to talk about how you have been feeling since you gave birth. I will use this phone to listen and write it down. Your voice will be deleted immediately after it is written. The writing goes only to the clinic health worker. You can stop at any time, and there is no obligation.",
   },
 
+  /**
+   * A SEPARATE consent point, read only if the CHP is asking for research retention.
+   *
+   * It exists as its own script because the base script above says the writing goes to the clinic
+   * "peke yake" — only. Retaining it for research makes that sentence untrue, so the change has to
+   * be said out loud rather than buried in a toggle. Four things this wording does deliberately:
+   * it says the ask is optional before it says anything else; it names exactly what changes about
+   * the earlier promise; it says her name is not used; and it says refusing costs her nothing,
+   * because a request from a health worker in her home is not a neutral one.
+   *
+   * ⚠️ Pending native Kenyan Kiswahili review, like every other string here.
+   */
+  researchConsentScript: {
+    sw: "Kuna jambo lingine, na hili si lazima kabisa. Tunaweza kuhifadhi maandishi ya mazungumzo haya ili kuboresha kifaa hiki. Ukikubali, maandishi hayataenda kwa kliniki peke yake — yatahifadhiwa pia kwa kazi hiyo. Jina lako halitatumika. Ukikataa, hakuna kitakachobadilika kwenye huduma yako.",
+    en: "One more thing, and this one is entirely optional. We can keep the writing from this conversation to improve this tool. If you agree, the writing will not go only to the clinic — it will also be kept for that work. Your name will not be used. If you say no, nothing about your care changes.",
+  },
+
   consentBullets: [
     { sw: "Tunarekodi sauti yako wakati wa mazungumzo.", en: "We record your voice during the conversation." },
     { sw: "Sauti hufutwa mara tu baada ya kuandikwa.", en: "The audio is deleted as soon as it is written down." },

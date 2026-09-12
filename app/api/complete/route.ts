@@ -206,6 +206,8 @@ export async function POST(req: Request) {
         "not_a_diagnosis",
         "instrument_not_criterion_validated_in_swahili",
         ...(contested.length > 0 ? ["unresolved_contradiction_excluded_from_score"] : []),
+        // On the record itself, so anyone reading it later knows the transcript still exists.
+        ...(session.transcriptRetained ? ["transcript_retained_for_research_by_consent"] : []),
         ...(referral.incomplete ? ["incomplete_screen"] : []),
         ...(possibleUnderEndorsement ? ["possible_under_endorsement"] : []),
         ...(backRead.fellBackToTemplate || handover.fellBackToTemplate ? ["generated_text_withheld_by_safety_check"] : []),
@@ -215,15 +217,25 @@ export async function POST(req: Request) {
     },
   });
 
-  // ---- purge. Audio was never written; transcripts go now (§17.8). ----------------------
-  await prisma.turn.updateMany({ where: { sessionId: session.id }, data: { transcript: null } });
+  // ---- purge. Audio was never written; transcripts go now (§17.8) unless she said otherwise.
+  //
+  // Retention is opt-in per session, asked as its own consent point with its own script, and
+  // default off. Withdrawal still destroys everything regardless — the cascade does not consult
+  // this flag, and it must never be made to.
+  if (!session.transcriptRetained) {
+    await prisma.turn.updateMany({ where: { sessionId: session.id }, data: { transcript: null } });
+  }
 
   await prisma.session.update({
     where: { id: session.id },
     data: { status: "completed", endedAt: new Date() },
   });
 
-  await audit(session.id, "transcript_purged", { turns: session.turns.length });
+  await audit(
+    session.id,
+    session.transcriptRetained ? "transcript_retained_by_consent" : "transcript_purged",
+    { turns: session.turns.length },
+  );
   await audit(session.id, "audio_purged", { note: "audio is never persisted; buffers are request-scoped" });
   await audit(session.id, "record_persisted", {
     recordId: record.id,

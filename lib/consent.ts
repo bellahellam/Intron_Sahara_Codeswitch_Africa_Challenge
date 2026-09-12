@@ -9,4 +9,10 @@
  * BUMP THIS whenever COPY.consentScript changes. A consent record whose script_version points at
  * wording the mother never heard is worse than no version field at all.
  */
-export const CONSENT_SCRIPT_VERSION = "v1";
+export const CONSENT_SCRIPT_VERSION = "v2";
+
+/**
+ * v2 (12 Sep 2026) added the separate research-retention ask. The base script is unchanged; the
+ * additional ask is a distinct consent point with its own wording, because it changes the answer
+ * to "who sees my words" that the base script already gave.
+ */

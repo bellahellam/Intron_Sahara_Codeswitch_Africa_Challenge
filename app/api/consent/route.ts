@@ -16,6 +16,8 @@ export async function POST(req: Request) {
     sessionId?: string;
     granted?: boolean;
     audioRetentionOptIn?: boolean;
+    /** A SEPARATE consent point with its own script (§19.8). Never inferred from the main grant. */
+    transcriptRetentionOptIn?: boolean;
   } | null;
 
   if (!body?.sessionId || typeof body.granted !== "boolean") {
@@ -56,13 +58,22 @@ export async function POST(req: Request) {
       consentAt: new Date(),
       scriptVersion: CONSENT_SCRIPT_VERSION,
       audioRetained: body.audioRetentionOptIn === true,
+      transcriptRetained: body.transcriptRetentionOptIn === true,
     },
   });
 
   await audit(session.id, "consent_granted", {
     scriptVersion: CONSENT_SCRIPT_VERSION,
     audioRetained: body.audioRetentionOptIn === true,
+    transcriptRetained: body.transcriptRetentionOptIn === true,
   });
+
+  // Logged separately so a reviewer can count research opt-ins without reading consent records,
+  // and so an unusually high rate — which would suggest the ask is not landing as optional — is
+  // visible on its own.
+  if (body.transcriptRetentionOptIn === true) {
+    await audit(session.id, "transcript_retention_opt_in", { scriptVersion: CONSENT_SCRIPT_VERSION });
+  }
 
   return NextResponse.json({ ok: true, granted: true });
 }

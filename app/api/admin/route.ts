@@ -64,9 +64,12 @@ export async function GET(req: Request) {
         itemsProduced: (extraction.items ?? []).length,
         itemsDropped: dropped.length,
         dropReasons: dropped.map((d) => d.reason),
-        // Present only while the session is live. Null after completion, by design.
+        // A transcript survives for one of two reasons, and they are not the same fact:
+        // the session is still running, or she opted in to research retention.
         transcript: t.transcript,
         transcriptPurged: t.transcript === null,
+        retainedByConsent: s.transcriptRetained,
+        sessionStatus: s.status,
       };
     }),
   );
@@ -126,8 +129,13 @@ export async function GET(req: Request) {
     })),
     anonymousCounters: counters,
     transcriptPolicy:
-      "Transcripts exist only while a session is in progress. They are destroyed at completion " +
-      "(spec 17.8) and the consent script promises it. Widening this requires changing the " +
-      "retention policy AND the consent script.",
+      "Transcripts are destroyed at session completion (spec 17.8) UNLESS the mother opted in to " +
+      "research retention — a separate consent point with its own read-aloud script, default off. " +
+      "A transcript you can see here is either from a session still in progress, or from one where " +
+      "she agreed. Withdrawal destroys everything either way.",
+    retentionCounts: {
+      retainedByConsent: sessions.filter((s) => s.transcriptRetained).length,
+      totalSessions: sessions.length,
+    },
   });
 }

@@ -25,6 +25,8 @@ export default function Consent({ params }: { params: Promise<{ sessionId: strin
   const { sessionId } = use(params);
   const router = useRouter();
   const [retainAudio, setRetainAudio] = useState(false);
+  // Separate consent point, separate default. Never pre-checked.
+  const [retainTranscript, setRetainTranscript] = useState(false);
   const [busy, setBusy] = useState<"agree" | "decline" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +38,12 @@ export default function Consent({ params }: { params: Promise<{ sessionId: strin
       const res = await fetch("/api/consent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, granted, audioRetentionOptIn: granted ? retainAudio : false }),
+        body: JSON.stringify({
+          sessionId,
+          granted,
+          audioRetentionOptIn: granted ? retainAudio : false,
+          transcriptRetentionOptIn: granted ? retainTranscript : false,
+        }),
       });
       if (!res.ok) {
         setError("Haikuwezekana kuhifadhi jibu. Angalia mtandao, kisha jaribu tena.");
@@ -99,6 +106,47 @@ export default function Consent({ params }: { params: Promise<{ sessionId: strin
             </span>
           </span>
         </label>
+
+        {/* A SEPARATE consent point (§19.8), deliberately given its own card and its own read-aloud
+            script. The base script above tells her the writing goes to the clinic "peke yake" —
+            only. Retaining it makes that untrue, so the change is said out loud rather than
+            buried in a checkbox. */}
+        <section className="rounded-lg border-2 border-dashed border-neutral-500 p-4 space-y-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+            Swali la ziada — si lazima{" "}
+            <span className="gloss normal-case">(optional, separate question)</span>
+          </p>
+
+          <label className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              checked={retainTranscript}
+              onChange={(e) => setRetainTranscript(e.target.checked)}
+              className="mt-1 h-6 w-6 rounded border-neutral-500"
+            />
+            <span className="font-medium text-neutral-900">
+              Hifadhi maandishi kwa utafiti
+              <span className="gloss block not-italic">Keep the writing for research</span>
+            </span>
+          </label>
+
+          {/* The script only appears once she is being asked, so it is never read out of context. */}
+          {retainTranscript && (
+            <div className="space-y-2 border-l-4 border-ochre pl-3">
+              <p className="text-xs uppercase tracking-wide text-neutral-500">Soma hii pia kwa sauti</p>
+              <p className="aloud">{COPY.researchConsentScript.sw}</p>
+              <p className="gloss">{COPY.researchConsentScript.en}</p>
+            </div>
+          )}
+
+          <p className="text-sm text-neutral-700">
+            Bila hii, maandishi hufutwa mara tu uchunguzi unapokamilika.
+            <span className="gloss block not-italic">
+              Without this, the writing is destroyed as soon as the screening completes. Declining
+              changes nothing about her care.
+            </span>
+          </p>
+        </section>
 
         {error && (
           <div className="rounded-lg border-2 border-danger bg-white p-4">

@@ -167,6 +167,31 @@ in a web app on a mid-range Android.
 
 Do not read the first sentence as the second one. We do not claim offline screening.
 
+### Transcript retention is now opt-in, and that is a deviation from the spec
+
+§12.5 says any use of a recording for model improvement is "not offered in MVP at all". That has
+changed at the product owner's direction: a mother may now opt in to having the transcript of her
+session kept for demo and research purposes.
+
+Four things make this a genuine opt-in rather than a widened default:
+
+1. **It is a separate consent point with its own read-aloud script.** The base consent script says
+   the writing goes to the clinic *peke yake* — only. Retaining it makes that sentence untrue, so
+   the change is said out loud (`COPY.researchConsentScript`) rather than buried in a toggle.
+2. **Default off**, never pre-checked, and the script itself says refusing changes nothing about
+   her care — because a request from a health worker standing in her home is not a neutral one.
+3. **Withdrawal still destroys everything.** The cascade does not consult the retention flag and
+   must never be made to.
+4. The record carries `transcript_retained_for_research_by_consent` in its disclaimers, so anyone
+   reading it later knows the transcript still exists.
+
+⚠️ **A pilot needs more than this.** Research use of identifiable health data in Kenya requires
+NACOSTI licensing and accredited IRB approval (§17.10 items 4). This build is acceptable only
+because it processes synthetic and team-recorded audio exclusively, never real patient speech.
+
+The consent script version moved to `v2`. Records written under `v1` were consented under wording
+that did not mention retention, and their transcripts were purged.
+
 ### No real patient audio, ever, in this build
 
 Digital Health Act 2023 s.47 restricts offshore transfer of personal health information, and we

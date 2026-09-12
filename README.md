@@ -53,7 +53,8 @@ contain no model at all** — a clinical score produced by an LLM is not defensi
 
 No database server is needed. It runs on a local SQLite file out of the box.
 
-**Python 3.11+** is needed only for the benchmark harness (`bench/`), which is not built yet.
+**Python 3.11+** is needed for the benchmark harness (`bench/`). A CUDA GPU makes the local
+model rows practical but is not required — see the benchmark section.
 
 ## 2. Clone and install
 
@@ -65,7 +66,7 @@ git clone https://github.com/bellahellam/Intron_Sahara_Codeswitch_Africa_Challen
 cd Intron_Sahara_Codeswitch_Africa_Challenge && npm install
 ```
 
-## 3. Get the two API keys
+## 3. Get the API keys
 
 | Key | Where from | Free? | Needed for |
 |---|---|---|---|
@@ -99,11 +100,18 @@ Open `.env.local` and fill in `SAHARA_API_KEY` plus your chosen LLM key. The min
 SAHARA_API_KEY=<your intron key>
 LLM_PROVIDER=openrouter
 OPENROUTER_API_KEY=<your openrouter key>
+HF_TOKEN=<your hugging face token>        # benchmark only
+ADMIN_TOKEN=<any passphrase you choose>   # unlocks /admin
 ```
 
 **Two env files, on purpose:** `.env` holds `DATABASE_URL` because the Prisma CLI does not read
 `.env.local`; `.env.local` holds every actual secret. Both are gitignored. `.env` is created for
 you by the next step if it does not exist.
+
+`HF_TOKEN` needs approved access to the two gated Intron datasets — request it on Hugging Face at
+[intronhealth/AfriSwitchCare](https://huggingface.co/datasets/intronhealth/AfriSwitchCare) and
+[intronhealth/AfriSwitch](https://huggingface.co/datasets/intronhealth/AfriSwitch). Approval is not
+instant, so ask early.
 
 ## 5. Create the database
 
@@ -147,12 +155,26 @@ npm run dev
 Open **http://localhost:3000**. Use your browser's device toolbar at **360×640** — the layout
 target is a mid-range Android, and that is the width it is verified at.
 
-**Walking the flow:** enter any CHP code (e.g. `KWG-014`) → `Anza uchunguzi` → type a name →
-`Amekubali` on the consent screen → tap the record control and speak → evidence cards appear →
-`Maliza` → confirm amber items → back-read → `Tuma rufaa`.
+### The two views
 
-The browser will ask for microphone permission at the first record tap, in context — never at
-launch.
+| | |
+|---|---|
+| **`/`** — the CHP view | What a community health worker sees. No confidence numbers, no latencies, no model names. She taps **once** to start listening and **once** when the visit ends |
+| **`/admin`** — the technical view | Pipeline telemetry, audit trail, live model config, and the canaries. Unlocked with `ADMIN_TOKEN` |
+
+**Walking a screening:** enter any CHP code (e.g. `KWG-014`) → `Anza uchunguzi` → type a name →
+`Amekubali` on the consent screen → tap **Anza kusikiliza** → talk normally → evidence cards appear
+as segments close on silence → `Maliza` → confirm amber items → back-read → `Tuma rufaa`.
+
+Capture is hands-free by design. She does not press anything between turns; segments close
+automatically after about two seconds of silence. Asking a health worker to reach for a phone
+mid-conversation — possibly mid-disclosure — costs more in care than it buys in tidy audio.
+
+The browser asks for microphone permission at the first tap, in context — never at launch.
+
+> `/admin` is gated by a shared passphrase, **not authentication**. It keeps the technical surface
+> off a CHP's phone and gates a demo view. A CHP code is an identifier, not a secret (§14.5). Real
+> auth is pilot work.
 
 ## 8. Testing without spending Sahara credits
 
@@ -169,7 +191,8 @@ Available fixtures: `rumination`, `somatic`, `anhedonia`, `appetite`, `sleep`, `
 `riskHedged` is the one to try first — it triggers the full-screen escalation interrupt, which is
 the most important behaviour in the product and needs no LLM key at all.
 
-**`mock` must be set explicitly**, so a demo can never silently run on fixtures.
+**`mock` must be set explicitly**, so a demo can never silently run on fixtures. The admin view
+shows a loud red warning whenever it is active.
 
 ## 9. Tests
 
@@ -177,8 +200,16 @@ the most important behaviour in the product and needs no LLM key at all.
 npm test
 ```
 
-76 tests, no network, no API keys needed. They cover the deterministic core: band tables at every
-boundary, referral routing, the item-9 gate, the safety scan, span validation and the backstops.
+112 tests, no network, no API keys needed. The deterministic core: band tables at every boundary,
+referral routing, the item-9 gate, the safety scan, span validation, the backstops, and the §26
+acceptance scenarios.
+
+```bash
+npx tsx scripts/acceptance-live.ts
+```
+
+13 more that need a running server — the consent gate, the consent-bypass attempt, withdrawal.
+Start `npm run dev` in another terminal first.
 
 ```bash
 npm run typecheck
@@ -187,6 +218,133 @@ npm run typecheck
 ```bash
 npm run build
 ```
+
+---
+
+# Running the benchmark
+
+It answers one question: **does ASR quality on code-switched Swahili change the clinical decision
+this product makes?** Not "which model has the lowest WER".
+
+## Setup
+
+```bash
+pip install datasets jiwer pandas httpx soundfile numpy huggingface_hub faster-whisper
+```
+
+`faster-whisper` is what makes Whisper large-v3 fit a small GPU — int8 quantisation brings it from
+roughly 10 GB to roughly 3 GB. Without it the harness falls back to `transformers`, which needs
+more VRAM. Your `HF_TOKEN` must have approved access to the gated datasets (step 4).
+
+## The models
+
+| Key | What it is | Needs |
+|---|---|---|
+| `sahara-off` | Sahara v2.5, LLM corrections **off** | Intron credits |
+| `sahara-on` | Sahara v2.5, corrections **on** (API default) | Intron credits |
+| `whisper-sw` | Whisper large-v3, `language="sw"` forced | GPU, no API |
+| `whisper-auto` | Whisper large-v3, auto-detect | GPU, no API |
+| `jacaranda` | Jacaranda-Health/ASR-STT, the regional incumbent | GPU, no API |
+
+`sahara-off` is the primary column **and** the configuration the product ships. `sahara-on` is
+reported separately to quantify what the undisclosed post-processor contributes — most teams will
+benchmark the API default and not notice they are measuring an ASR model plus a hidden LLM.
+
+Whisper runs in **both** conditions deliberately. Forcing `sw` versus letting it auto-detect is
+what exposes whether the most widely used ASR model collapses code-switched audio into a single
+language. That is the thesis, tested on the model everyone reaches for.
+
+Jacaranda matters most of the three local rows: it is whisper-medium fine-tuned Swahili+English by
+the organisation running maternal-health messaging for roughly 3M Kenyan mothers. If Sahara does
+not beat the regional incumbent on our task, that is a finding worth publishing.
+
+## Run it
+
+Start with one conversation to check the plumbing:
+
+```bash
+python -m bench.run --models sahara-off --limit 1
+```
+
+Then the full run:
+
+```bash
+python -m bench.run --models sahara-off,sahara-on,whisper-sw,whisper-auto,jacaranda
+```
+
+```bash
+python -m bench.report
+```
+
+**Budget the time.** Sahara is rate-limited to 30 requests/minute and the harness paces itself:
+roughly 30 minutes per Sahara configuration. Whisper large-v3 on a small GPU runs about 1.7×
+realtime, so roughly 2.5 hours per condition for the 1.54 hours of audio. Jacaranda is faster.
+
+The runner **writes incrementally and aborts immediately if the Sahara balance runs out**, so a
+long run that dies partway keeps every conversation it already transcribed.
+
+## What it produces
+
+| Path | What |
+|---|---|
+| `results/afriswitchcare_sw/<model>.csv` | Every hypothesis transcript. Every number is auditable back to one of these |
+| `results/afriswitchcare_sw/metrics_per_sample.csv` | Every metric, every conversation |
+| `results/afriswitchcare_sw/metrics_summary.csv` | Per-model aggregates |
+| `report/BENCHMARK.md` | The written report |
+| `data/benchmark_results.json` | What the in-product "Kwa nini Sahara?" page renders |
+
+## The metrics, and why Tier 2 exists
+
+**Tier 1** — WER, CER, latency. Standard, for comparability with Intron's published numbers.
+
+**Tier 2 is the contribution.** Intron's own benchmarking repo is *not* a code-switching harness —
+its README says intra-utterance code-switching is "inconsistently annotated", and it computes no
+CMI, no switch-point metric and no per-word LID. These are net-new:
+
+- **EESR** — Embedded-English Span Recall. For each gold `[[EN]]` span, did its tokens survive?
+  Directly measures switch-boundary deletion, which aggregate WER structurally cannot see.
+- **EESR-clinical** — the same, restricted to spans containing an affective term (`stress`,
+  `depressed`, `worry`…). The general number can look healthy while this subset collapses, and the
+  subset is what determines whether the product works.
+- **CIR** — Clinical Idiom Recall, the Kiswahili half of the same question.
+- **SPR** — Safety-Phrase Recall, reported **seen** and **held-out** separately, never merged.
+- **CMI-Δ** — does the model preserve the structure of switching, or flatten it?
+
+**Tier 3** — construct F1, |ΔPHQ-9|, **band-flip**, tier-flip. **Deliberately not computed on
+AfriSwitchCare**, where it is degenerate by construction: 12 conversations across 12 conditions,
+one of them depression, so eleven gold PHQ-9 totals sit near zero and no transcription error can
+move a band. Tier 3 needs field set C — see below.
+
+## Deriving the deletion threshold
+
+```bash
+python -m bench.derive_floor
+```
+
+Computes the 5th percentile of chars-per-second across the 12 gold transcripts, subtracts a safety
+margin, and writes `data/deletion_floor.json`. **This is the one number that crosses from the
+benchmark into the live product.** Do not hardcode a guess — the product reports `calibrated: false`
+and says so on screen until this has actually run.
+
+---
+
+# Tasks that need a human
+
+Three things no amount of code closes, all running on someone else's clock:
+
+1. **Clinician review** of the safety lexicon — 49 rows, currently all unreviewed
+2. **Native Kenyan Kiswahili review** of every user-visible string — 70 of them
+3. **Recording field set C** — 28 clips, which blocks band-flip, the headline metric
+
+```bash
+npx tsx scripts/export-reviews.ts
+```
+
+produces both review packets as CSV, ready to send to people who will never open this repository.
+**[docs/HUMAN-TASKS.md](docs/HUMAN-TASKS.md) has the exact wording to ask them for**, and
+`scripts/apply-reviews.ts` folds the answers back in.
+
+Start these first. They are free to request and they block submission.
 
 ## Troubleshooting
 
@@ -287,13 +445,17 @@ the point of the function.
 | `data/` | The lexicons and the fixed item-9 probe — CSV and txt, so a clinician can review them without reading TypeScript |
 | `docs/contracts.md` | The two frozen interface contracts |
 | `docs/llm-selection.md` | How the extraction model was chosen, and what it still gets wrong |
-| `bench/` | The Python benchmark harness *(not yet built)* |
+| `bench/` | The Python benchmark harness — adapters, metrics, runner, report |
+| `scripts/` | Smoke tests, model comparison, review-packet export |
+| `review/` | Generated review packets for the clinician and Kiswahili reviewer |
 
 ## Documents
 
 - [LIMITATIONS.md](LIMITATIONS.md) — what this does not do, does not know, and has not verified
 - [docs/contracts.md](docs/contracts.md) — the frozen interfaces
 - [docs/llm-selection.md](docs/llm-selection.md) — model choice by measurement
+- [docs/HUMAN-TASKS.md](docs/HUMAN-TASKS.md) — the three tasks that need a person, with the wording to ask for
+- [RESPONSIBLE-AI.md](RESPONSIBLE-AI.md) — consent, risk and privacy, and where each is enforced in code
 - [MAMA-SAUTI-Build-Spec.md](MAMA-SAUTI-Build-Spec.md) — the full product specification
 
 ## Licensing and attribution

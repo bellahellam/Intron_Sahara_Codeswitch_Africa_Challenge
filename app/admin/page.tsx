@@ -50,6 +50,8 @@ interface AdminData {
     dropReasons: string[];
     transcript: string | null;
     transcriptPurged: boolean;
+    retainedByConsent: boolean;
+    sessionStatus: string;
   }>;
   records: Array<{
     id: string;
@@ -64,6 +66,7 @@ interface AdminData {
   recentEvents: Array<{ kind: string; sessionId: string | null; createdAt: string; payload: unknown }>;
   anonymousCounters: Array<{ kind: string; day: string; count: number }>;
   transcriptPolicy: string;
+  retentionCounts: { retainedByConsent: number; totalSessions: number };
 }
 
 export default function Admin() {
@@ -238,6 +241,12 @@ export default function Admin() {
       <section className="space-y-2">
         <h2 className="text-base font-semibold">Transcripts</h2>
         <p className="rounded-md bg-neutral-200 p-3 text-sm text-neutral-700">{data.transcriptPolicy}</p>
+        <p className="text-sm text-neutral-700">
+          <span className="tabular font-medium">{data.retentionCounts.retainedByConsent}</span> of{" "}
+          <span className="tabular font-medium">{data.retentionCounts.totalSessions}</span> sessions
+          opted in. A high rate is worth looking at — it would suggest the ask is not landing as
+          optional.
+        </p>
         {liveTranscripts.length === 0 ? (
           <p className="text-sm text-neutral-500">
             No sessions in progress. Every completed session&apos;s transcripts have been destroyed —
@@ -247,8 +256,19 @@ export default function Admin() {
           <div className="space-y-2">
             {liveTranscripts.map((t) => (
               <div key={`${t.sessionId}-${t.idx}`} className="card">
-                <p className="mb-1 text-xs text-neutral-500">
-                  {t.sessionId.slice(0, 8)} · turn {t.idx} · {(t.durationMs / 1000).toFixed(1)}s
+                <p className="mb-1 flex items-center gap-2 text-xs text-neutral-500">
+                  <span>
+                    {t.sessionId.slice(0, 8)} · turn {t.idx} · {(t.durationMs / 1000).toFixed(1)}s
+                  </span>
+                  {t.retainedByConsent ? (
+                    <span className="rounded bg-success/10 px-2 py-0.5 font-medium text-success">
+                      retained — she agreed
+                    </span>
+                  ) : (
+                    <span className="rounded bg-neutral-200 px-2 py-0.5 font-medium">
+                      session in progress
+                    </span>
+                  )}
                 </p>
                 <p className="text-sm text-neutral-900">{t.transcript}</p>
               </div>
