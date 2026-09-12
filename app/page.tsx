@@ -162,6 +162,10 @@ export default function Home() {
         <Link href="/sahara" className="btn-quiet flex items-center justify-center">
           {COPY.buttons.whySahara.sw}
         </Link>
+        {/* Deliberately understated. The technical surface is not for the person on a doorstep. */}
+        <Link href="/admin" className="block text-center text-xs text-neutral-500 underline">
+          Admin
+        </Link>
       </div>
     </main>
   );

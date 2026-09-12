@@ -1,28 +1,33 @@
 "use client";
 
 /**
- * S4 Mazungumzo (Conversation) — §15.4. The screen where the product lives.
+ * S4 Mazungumzo (Conversation) — the screen where the product lives.
  *
- * Four states: idle, recording, processing, extracted.
+ * TWO THINGS CHANGED FROM THE ORIGINAL SPEC, both because of the CHP rather than the engineering.
  *
- * Two design rules are enforced here and are not negotiable:
- *   - The largest text on any card is the mother's own words (§16.2 principle 1).
- *   - The transcript is never the primary object; it is collapsed below the evidence (CR-C2).
+ * 1. CAPTURE IS CONTINUOUS. She taps once at the start of the visit and once at the end. Segments
+ *    close on silence, automatically. §10.1 chose tap-per-turn, and its reasoning about hand
+ *    availability was right — but it put the phone in the middle of a conversation about self-harm,
+ *    repeatedly, at the exact moments her attention belongs on the mother. See
+ *    components/useContinuousRecorder.ts for what that costs and what stands in its place.
  *
- * `Maliza` (finish) and `Alama ya hatari` (raise risk flag) are available at ALL times, so Grace
- * is never trapped in the loop and never dependent on the machine noticing risk before she does.
+ * 2. NO NUMBERS ON HER SCREEN. No confidence values, no latencies, no model names, no chars-per-
+ *    second. Confidence is still computed and still gates the amber confirmation — she sees the
+ *    WORD ("Thibitisha") and never the number. Those belong on the admin view (lib/roles.ts).
+ *
+ * What she sees while a mother is speaking: the mother's own words, a shape showing how much of
+ * the screening is covered, one suggested question, and the two controls she must never have to
+ * hunt for — raise a risk flag, and finish.
  */
 
 import { useRouter } from "next/navigation";
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import { COPY } from "@/lib/copy";
-import { formatElapsed, useRecorder, WARN_AT_MS } from "@/components/useRecorder";
-import { AmplitudeMeter, CoverageStrip, ErrorCard, Header, RecordControl } from "@/components/ui";
+import { formatElapsed, useContinuousRecorder, type Segment } from "@/components/useContinuousRecorder";
+import { CoverageStrip, ErrorCard, Header, ListeningControl } from "@/components/ui";
 import { EvidenceCard, TranscriptDisclosure, type EvidenceItem } from "@/components/EvidenceCard";
 import { Escalation, type EscalationTrigger } from "@/components/Escalation";
 import { emptyCoverage, type CoverageMap } from "@/lib/clinical/coverage";
-
-type Phase = "idle" | "recording" | "asr" | "extracting" | "extracted";
 
 interface TurnResponse {
   turnIndex: number;
@@ -42,23 +47,25 @@ interface TurnResponse {
 }
 
 export default function Conversation({ params }: { params: Promise<{ sessionId: string }> }) {
-  // Next 16 delivers route params as a Promise; `use` unwraps it in a client component.
   const { sessionId } = use(params);
   const router = useRouter();
 
-  const [phase, setPhase] = useState<Phase>("idle");
   const [items, setItems] = useState<EvidenceItem[]>([]);
   const [coverage, setCoverage] = useState<CoverageMap>(emptyCoverage());
   const [lastTurn, setLastTurn] = useState<TurnResponse | null>(null);
-  // Turn 0 is pre-filled with the opening question (§15.4 S4 empty state).
   const [probe, setProbe] = useState<{ text: string; fixed: boolean } | null>({
     text: COPY.openingQuestion.sw,
     fixed: true,
   });
   const [escalation, setEscalation] = useState<EscalationTrigger | null>(null);
-  const [error, setError] = useState<{ sw: string; en: string; retryable: boolean } | null>(null);
-  const [micPrompt, setMicPrompt] = useState(false);
+  const [error, setError] = useState<{ sw: string; en: string } | null>(null);
+  const [pending, setPending] = useState(0);
   const [online, setOnline] = useState(true);
+  const [micPrompt, setMicPrompt] = useState(false);
+
+  // Segments must reach the server IN ORDER — the agent's coverage state is sequential, and a
+  // turn that overtakes its predecessor would be scored against the wrong context.
+  const queueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     setOnline(navigator.onLine);
@@ -72,32 +79,22 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
     };
   }, []);
 
-  const submitTurn = useCallback(
-    async ({ blob, durationMs }: { blob: Blob; durationMs: number }) => {
-      setPhase("asr");
-      setError(null);
-
+  const sendSegment = useCallback(
+    async (segment: Segment) => {
       const form = new FormData();
       form.append("sessionId", sessionId);
-      form.append("audio", blob, "turn.webm");
-      form.append("durationMs", String(durationMs));
-
-      // Two named phases, because a single indeterminate spinner over a six-second wait reads as
-      // a hang on a slow connection. Never a fake percentage (§10.3).
-      const toExtracting = setTimeout(() => setPhase("extracting"), 3500);
+      form.append("audio", segment.blob, "turn.webm");
+      form.append("durationMs", String(segment.durationMs));
+      if (segment.chpSpokeDuring) form.append("chpSpokeDuring", "true");
 
       try {
         const res = await fetch("/api/turn", { method: "POST", body: form });
-        clearTimeout(toExtracting);
-
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           setError({
             sw: body.messageSw ?? COPY.states.failedNetwork.sw,
             en: body.messageEn ?? COPY.states.failedNetwork.en,
-            retryable: body.retryable !== false,
           });
-          setPhase("idle");
           return;
         }
 
@@ -105,6 +102,7 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
         setLastTurn(data);
         setCoverage(data.coverage);
         setItems((prev) => [...prev, ...data.items]);
+        setError(null);
 
         if (data.decision.action === "ESCALATE" || data.safety.hit || data.riskFlag) {
           setEscalation({
@@ -115,41 +113,39 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
             source: data.safety.hit ? "deterministic_lexicon" : "llm_risk_flag",
             failedClosed: data.safety.failedClosed,
           });
-          setPhase("extracted");
+          recorder.stop();
           return;
         }
 
-        if (data.decision.action === "COMPLETE") {
-          setProbe(null);
-          setPhase("extracted");
-          return;
-        }
-
-        setProbe(data.probe ? { text: data.probe.text, fixed: data.probe.fixed } : null);
-        setPhase("extracted");
+        if (data.decision.action === "COMPLETE") setProbe(null);
+        else if (data.probe) setProbe({ text: data.probe.text, fixed: data.probe.fixed });
       } catch {
-        clearTimeout(toExtracting);
-        setError({ sw: COPY.states.failedNetwork.sw, en: COPY.states.failedNetwork.en, retryable: true });
-        setPhase("idle");
+        setError({ sw: COPY.states.failedNetwork.sw, en: COPY.states.failedNetwork.en });
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [sessionId],
   );
 
-  const recorder = useRecorder(submitTurn);
+  const onSegment = useCallback(
+    (segment: Segment) => {
+      setPending((n) => n + 1);
+      queueRef.current = queueRef.current
+        .then(() => sendSegment(segment))
+        .finally(() => setPending((n) => Math.max(0, n - 1)));
+    },
+    [sendSegment],
+  );
 
-  useEffect(() => {
-    if (recorder.state === "recording") setPhase("recording");
-  }, [recorder.state]);
+  const recorder = useContinuousRecorder(onSegment);
 
   async function raiseManualFlag() {
-    recorder.abort();
+    recorder.stop();
     await fetch("/api/escalate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId, source: "manual" }),
     }).catch(() => {});
-    // The interrupt renders from bundled data, so it appears even if that call failed.
     setEscalation({ matchedTexts: [], source: "manual" });
   }
 
@@ -163,6 +159,7 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
   }
 
   async function withdrawConsent() {
+    recorder.abort();
     await fetch("/api/withdraw", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -171,8 +168,13 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
     router.push("/imekamilika?reason=withdrawn");
   }
 
-  const recording = recorder.state === "recording";
-  const processing = phase === "asr" || phase === "extracting";
+  function finish() {
+    recorder.stop();
+    // Let the last segment drain before moving on, so nothing she said is discarded.
+    queueRef.current = queueRef.current.then(() => {
+      router.push(`/kagua/${sessionId}`);
+    });
+  }
 
   return (
     <main className="flex min-h-screen flex-col pb-6">
@@ -187,7 +189,6 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
 
       <Header title="Mazungumzo" />
 
-      {/* §16.5a: "the machine is not listening for risk right now." Persistent, not dismissible. */}
       {!online && (
         <div className="mx-4 rounded-md border-2 border-warning bg-white px-3 py-2 text-sm">
           <p className="font-medium text-warning">! {COPY.offlineCaptureBanner.sw}</p>
@@ -195,8 +196,7 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
         </div>
       )}
 
-      <div className={["flex-1 space-y-4 px-4", recording ? "opacity-30" : ""].join(" ")}>
-        {/* The single affordance that makes an open-ended conversation feel finite. */}
+      <div className="flex-1 space-y-4 px-4">
         <section>
           <p className="mb-2 text-xs uppercase tracking-wide text-neutral-500">
             Hali ya uchunguzi <span className="gloss normal-case">(coverage)</span>
@@ -204,37 +204,38 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
           <CoverageStrip coverage={coverage} />
         </section>
 
+        {/* The deletion hint is phrased as something SHE can act on. No cps, no threshold. */}
         {lastTurn?.deletion.deletionSuspected && (
           <div className="rounded-md border border-warning bg-white px-3 py-2 text-sm">
             <p className="font-medium text-warning">! {COPY.states.deletionSuspected.sw}</p>
             <p className="gloss not-italic">{COPY.states.deletionSuspected.en}</p>
-            {!lastTurn.deletion.calibrated && (
-              <p className="mt-1 text-xs text-neutral-500">
-                Kizingiti hakijapimwa bado (detector not yet calibrated against the benchmark set).
-              </p>
-            )}
           </div>
         )}
 
         {lastTurn?.extractionFailed && (
           <ErrorCard
-            sw="Uchambuzi haukufanikiwa kwa zamu hii. Maandishi yamehifadhiwa. Unaweza kuuliza tena au kuandika mwenyewe."
-            en="Extraction failed for this turn. The transcript is saved. Ask again, or enter the item manually."
+            sw="Sehemu moja haikueleweka. Endelea kuongea naye — utaweza kuiandika baadaye."
+            en="One part could not be understood. Keep talking with her; you can enter it later."
           />
         )}
 
-        {/* The probe card. Marked as a SUGGESTION, not an instruction, with Uliza and Ruka at
-            equal visual weight — if Ruka looks discouraged, the CHP's clinical judgement is
-            being overridden by button styling (§16.5a). */}
-        {probe && !processing && (
+        {/* The probe. A suggestion, with Uliza and Ruka at equal weight. Tapping Uliza tells the
+            recorder the CHP is about to speak, so that window is labelled rather than guessed. */}
+        {probe && (
           <section className="rounded-lg border border-ochre/40 bg-ochre/10 p-4 space-y-3">
             <p className="text-xs uppercase tracking-wide text-ochre">
               Pendekezo la swali <span className="gloss normal-case">(suggested question)</span>
-              {probe.fixed && <span className="ml-2 normal-case">· maandishi yasiyobadilika</span>}
             </p>
             <p className="aloud">{probe.text}</p>
             <div className="flex gap-2">
-              <button type="button" className="btn-quiet flex-1" onClick={() => recorder.start()}>
+              <button
+                type="button"
+                className="btn-quiet flex-1"
+                onClick={() => {
+                  recorder.markSpeaking();
+                  setProbe(null);
+                }}
+              >
                 {COPY.buttons.ask.sw}
               </button>
               <button type="button" className="btn-quiet flex-1" onClick={() => setProbe(null)}>
@@ -244,44 +245,19 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
           </section>
         )}
 
-        {error && (
-          <ErrorCard
-            sw={error.sw}
-            en={error.en}
-            action={
-              error.retryable ? (
-                <p className="text-sm text-neutral-700">Rekodi tena ukiwa tayari.</p>
-              ) : undefined
-            }
-          />
-        )}
+        {error && <ErrorCard sw={error.sw} en={error.en} />}
 
-        {processing && (
-          <div className="card space-y-1">
-            {/* Two named phases. Cancel is available throughout; no fake percentage. */}
-            <p className="font-medium text-neutral-900">
-              {phase === "asr" ? COPY.states.asr.sw : COPY.states.extracting.sw}
-            </p>
-            <p className="gloss not-italic">
-              {phase === "asr" ? COPY.states.asr.en : COPY.states.extracting.en}
-            </p>
-          </div>
-        )}
-
-        {items.length === 0 && !processing ? (
-          <p className="text-neutral-500">{COPY.emptyStates.noEvidence.sw}</p>
+        {items.length === 0 ? (
+          <p className="text-neutral-500">
+            {recorder.recording ? COPY.states.listeningEmpty.sw : COPY.emptyStates.noEvidence.sw}
+          </p>
         ) : (
           <section className="space-y-3">
             {items.map((item, i) => (
               <EvidenceCard
                 key={`${item.construct}-${i}`}
                 item={item}
-                idiomLabel={
-                  lastTurn?.idiomMatches.find((m) => m.idiomId === item.idiom_id)?.phrase ?? undefined
-                }
-                onConfirm={() =>
-                  setItems((prev) => prev.map((it, j) => (j === i ? { ...it, confirmed: true } : it)))
-                }
+                idiomLabel={lastTurn?.idiomMatches.find((m) => m.idiomId === item.idiom_id)?.phrase}
                 onDispute={() =>
                   setItems((prev) => prev.map((it, j) => (j === i ? { ...it, disputed: true } : it)))
                 }
@@ -290,35 +266,12 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
           </section>
         )}
 
-        {/* Collapsed BELOW the evidence, always. */}
-        {lastTurn && (
-          <TranscriptDisclosure transcript={lastTurn.transcript} spans={lastTurn.languageSpans} />
-        )}
+        {lastTurn && <TranscriptDisclosure transcript={lastTurn.transcript} spans={lastTurn.languageSpans} />}
       </div>
 
-      {/* Capture controls. */}
+      {/* Capture controls. One tap to begin, one to end. Nothing in between. */}
       <div className="space-y-4 px-4 pt-6">
-        {recording && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-neutral-900">{COPY.states.recording.sw}</span>
-              <span
-                className={["tabular text-lg font-semibold", recorder.nearLimit ? "text-warning" : "text-neutral-900"].join(" ")}
-              >
-                {formatElapsed(recorder.elapsedMs)}
-              </span>
-            </div>
-            <AmplitudeMeter level={recorder.level} lowHint={recorder.lowLevelHint} />
-            {recorder.elapsedMs >= WARN_AT_MS && (
-              <p className="text-sm font-medium text-warning">! {COPY.states.nearLimit.sw}</p>
-            )}
-          </div>
-        )}
-
-        {recorder.state === "denied" && (
-          <ErrorCard sw={COPY.micDenied.sw} en={COPY.micDenied.en} />
-        )}
-
+        {recorder.state === "denied" && <ErrorCard sw={COPY.micDenied.sw} en={COPY.micDenied.en} />}
         {recorder.state === "unsupported" && (
           <ErrorCard
             sw="Kivinjari hiki hakiwezi kurekodi sauti. Tumia Chrome kwenye Android."
@@ -326,8 +279,7 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
           />
         )}
 
-        {/* Permission is requested in context at the first record tap, never at launch. */}
-        {micPrompt && recorder.state === "idle" && (
+        {micPrompt && !recorder.recording && (
           <div className="card space-y-3">
             <p className="text-neutral-900">{COPY.micPermission.sw}</p>
             <p className="gloss">{COPY.micPermission.en}</p>
@@ -344,16 +296,18 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
           </div>
         )}
 
-        <RecordControl
-          recording={recording}
+        <ListeningControl
+          recording={recorder.recording}
+          voiceActive={recorder.voiceActive}
+          level={recorder.level}
+          elapsed={formatElapsed(recorder.elapsedMs)}
+          lowLevel={recorder.lowLevelHint}
+          busy={pending > 0}
           onStart={() => (micPrompt ? recorder.start() : setMicPrompt(true))}
-          onStop={recorder.stop}
-          disabled={processing}
+          onStop={finish}
         />
 
         <div className="flex gap-2">
-          {/* Persistent, in a fixed position so it becomes muscle memory. Outline, not filled:
-              always available, never alarming (§16.5a). */}
           <button
             type="button"
             onClick={raiseManualFlag}
@@ -361,12 +315,7 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
           >
             {COPY.buttons.riskFlag.sw}
           </button>
-          {/* Always available, so Grace is never trapped in the loop. */}
-          <button
-            type="button"
-            onClick={() => router.push(`/kagua/${sessionId}`)}
-            className="btn-quiet flex-1"
-          >
+          <button type="button" onClick={finish} className="btn-quiet flex-1">
             {COPY.buttons.finish.sw}
           </button>
         </div>

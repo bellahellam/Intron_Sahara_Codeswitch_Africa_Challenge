@@ -118,6 +118,83 @@ export function AmplitudeMeter({ level, lowHint }: { level: number; lowHint: boo
 const LOW_FLOOR_FRACTION = 0.08;
 
 /**
+ * The hands-free capture control.
+ *
+ * It has exactly two states because the CHP performs exactly two actions in a visit: begin, and
+ * end. Everything between them is the system's problem, not hers.
+ *
+ * The meter is doing a real job and is the reason it survives the "no numbers on her screen" rule:
+ * it is the only element that proves the phone is actually hearing the mother, and it does that
+ * for the MOTHER watching the screen as much as for the CHP. What it does NOT show is a number.
+ *
+ * The halo pulses only while a voice is present, so "it is listening and it can hear her" and
+ * "it is on but hearing nothing" are visibly different from a metre away (§16.2 principle 3).
+ */
+export function ListeningControl({
+  recording,
+  voiceActive,
+  level,
+  elapsed,
+  lowLevel,
+  busy,
+  onStart,
+  onStop,
+}: {
+  recording: boolean;
+  voiceActive: boolean;
+  level: number;
+  elapsed: string;
+  lowLevel: boolean;
+  busy: boolean;
+  onStart: () => void;
+  onStop: () => void;
+}) {
+  if (!recording) {
+    return (
+      <div className="flex flex-col items-center gap-3">
+        <button
+          type="button"
+          onClick={onStart}
+          aria-label={COPY.buttons.startListening.sw}
+          className="h-[88px] w-[88px] rounded-full bg-primary text-3xl text-white active:bg-primary-light"
+        >
+          ●
+        </button>
+        <span className="text-base font-medium text-neutral-900">{COPY.buttons.startListening.sw}</span>
+        <span className="gloss">{COPY.buttons.startListening.en}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-2 font-medium text-neutral-900">
+          <span
+            aria-hidden
+            className={[
+              "inline-block h-3 w-3 rounded-full bg-primary",
+              voiceActive ? "animate-pulse-halo" : "opacity-40",
+            ].join(" ")}
+          />
+          {voiceActive ? COPY.states.hearing.sw : COPY.states.listening.sw}
+        </span>
+        <span className="tabular text-lg font-semibold text-neutral-900">{elapsed}</span>
+      </div>
+
+      <AmplitudeMeter level={level} lowHint={lowLevel} />
+
+      {/* Work in flight is shown as reassurance, never as a number or a spinner she must wait on. */}
+      {busy && <p className="text-sm text-neutral-500">{COPY.states.working.sw}</p>}
+
+      <button type="button" onClick={onStop} className="btn-primary">
+        {COPY.buttons.endVisit.sw}
+      </button>
+    </div>
+  );
+}
+
+/**
  * §16.5a: the record control is the only circle in the product, and at rest it does NOT pulse,
  * so rest and active are unambiguous. The pulse lives on a halo rather than the button, because
  * a growing button moves the tap target.

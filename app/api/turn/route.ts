@@ -25,6 +25,10 @@ export async function POST(req: Request) {
   const sessionId = form?.get("sessionId");
   const audio = form?.get("audio");
   const durationMs = Number(form?.get("durationMs") ?? 0);
+  // Set by the continuous recorder when the CHP tapped "Uliza" during this segment, i.e. she read
+  // a probe aloud into the stream. Continuous capture removed the turn boundary that used to
+  // separate the speakers (§11.3a), so this flag is part of what replaces it.
+  const chpSpokeDuring = form?.get("chpSpokeDuring") === "true";
 
   if (typeof sessionId !== "string" || !(audio instanceof Blob)) {
     return NextResponse.json(
@@ -182,6 +186,7 @@ export async function POST(req: Request) {
     itemsDropped: outcome.dropped.length,
     dropReasons: outcome.dropped.map((d) => d.reason),
     somaticBackstopFired: outcome.somaticBackstopFired,
+    chpSpokeDuring,
     idiomsMatched: outcome.idiomMatches.map((m) => m.idiomId),
     action: outcome.decision.action,
     extractionFailed: outcome.extractionFailed,

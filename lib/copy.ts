@@ -43,6 +43,8 @@ export const COPY = {
     declined: { sw: "Amekataa", en: "She declined" },
     record: { sw: "Rekodi", en: "Record" },
     tapToRecord: { sw: "Bofya kurekodi", en: "Tap to record" },
+    startListening: { sw: "Anza kusikiliza", en: "Start listening" },
+    endVisit: { sw: "Maliza ziara", en: "End the visit" },
     stop: { sw: "Simamisha", en: "Stop" },
     ask: { sw: "Uliza", en: "Ask" },
     skip: { sw: "Ruka", en: "Skip" },
@@ -122,6 +124,15 @@ export const COPY = {
   /** §15.5 interaction states. */
   states: {
     idle: { sw: "Bofya kurekodi", en: "Tap to record" },
+    // Continuous capture. "Listening" and "hearing her" are deliberately different strings: the
+    // mother can see the screen, and "inakusikia" tells her the phone is picking her up.
+    listening: { sw: "Inasikiliza...", en: "Listening" },
+    hearing: { sw: "Inakusikia", en: "Hearing her" },
+    working: { sw: "Inaandika kimya kimya. Endelea kuongea naye.", en: "Writing quietly. Keep talking with her." },
+    listeningEmpty: {
+      sw: "Inasikiliza. Ongea naye kawaida — sio lazima ubonyeze chochote.",
+      en: "Listening. Talk with her normally — you do not need to press anything.",
+    },
     recording: { sw: "Inarekodi...", en: "Recording" },
     nearLimit: { sw: "Sekunde 10 zimebaki", en: "10 seconds left" },
     asr: { sw: "Inasikiliza...", en: "Listening" },
@@ -155,8 +166,9 @@ export const COPY = {
     // §15.4 S1: an outline illustration, never a sad face.
     home: { sw: "Hakuna uchunguzi leo. Anza wa kwanza.", en: "No screenings today. Start the first one." },
     noEvidence: {
-      sw: "Bado hakuna kilichopatikana. Bofya kurekodi ili kuanza.",
-      en: "Nothing found yet. Tap to record to begin.",
+      // Hands-free capture: she taps once to begin listening, not once per turn.
+      sw: "Bado hakuna kilichopatikana. Bofya \"Anza kusikiliza\" kisha ongea naye.",
+      en: "Nothing found yet. Tap start listening, then talk with her.",
     },
   },
 

@@ -108,6 +108,35 @@ set no target for it, make no performance claim about it, and do not lead with i
 from every model's training distribution, so any number we produced would measure that absence
 rather than anything about this product. It is a research question (§29.5), not an MVP capability.
 
+### Continuous capture weakened speaker attribution, deliberately
+
+§10.1 chose tap-to-start/tap-to-stop PER TURN, and §11.3a leaned on it: "the turn boundary already
+IS the diarization." Push-to-talk meant the CHP asked her question and *then* recorded, so speaker
+separation came from the UI rather than from a model.
+
+**We changed it.** She now taps once at the start of the visit and once at the end; segments close
+on silence automatically. The reason is clinical, not technical: making her reach for the phone
+between every exchange put the device into the middle of a conversation about self-harm,
+repeatedly, at the moments her attention belonged entirely on the mother. §16.2's own principle —
+the interface must not compete with the human moment — argued against the interaction the spec
+picked.
+
+**What it costs, stated rather than glossed:** her voice is now inside the audio stream, so the
+failure §11.3a names — *the CHP's own words become the mother's clinical evidence* — is no longer
+prevented structurally. Three things stand in its place:
+
+1. **Known-prompt suppression (FR-11a)** drops any span matching the probe the system issued. This
+   was always the measure aimed at the dominant case, and it is unaffected by the change.
+2. **`chpSpokeDuring`** — tapping `Uliza` marks the segment as containing CHP speech, so the flag
+   is recorded rather than inferred. Visible in the admin view.
+3. This entry.
+
+⚠️ **The residual is real.** A segment where the CHP speaks without having tapped `Uliza` carries
+no flag, and known-prompt suppression only catches text resembling a probe we generated. This is
+weaker than the turn boundary it replaced. It is a considered trade of attribution precision for
+clinical attention, and the right resolution is the diarization test in §11.3a — not pretending
+the mitigation is complete.
+
 ### Speaker diarization is not built
 
 The dominant attribution risk is narrower and worse than "we do not know who spoke": it is that
