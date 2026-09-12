@@ -124,6 +124,38 @@ code-switching is visible on screen — and it is not good enough to produce a t
 **CMI is therefore computed in the benchmark harness, on gold text, not in the product.** A
 heuristic LID yields CMI with unknown error, which would make CMI-Δ meaningless.
 
+### ⬜ The extraction model's confidence scores are not usable as confidence
+
+**This weakens one of the three verification layers, so it is stated first.**
+
+`nex-agi/nex-n2.5-pro:free` returns nearly every item at **0.97–0.99** regardless of how ambiguous
+the utterance is. A calibration rubric was added to the prompt and did not move it.
+
+The consequence is specific. §10.5's amber band (0.60–0.84) is what triggers the **per-item CHP
+confirmation** that is verification layer 2 of three (§11.9). With almost everything landing green,
+that layer rarely engages on its own. Human verification then rests on the CHP's own reading of the
+evidence cards and on the back-read to the mother — layers 2 and 3 collapsing toward each other.
+
+It is not universal: shorter, genuinely ambiguous utterances have produced 0.84 in live runs, and
+the amber path does work when it fires. But it fires less often than the design assumes.
+
+**This is the single strongest argument for moving to a stronger extraction model before
+submission.** See `docs/llm-selection.md`.
+
+### ⬜ The extraction model over-extracts, and code has to catch it
+
+Given one rumination sentence, the model returned **five GAD-7 items** — 1, 2, 3, 4 and 5 — four of
+them quoting the same clause, all at severity 2. Unchecked that is GAD-7 = 10, a "moderate" band
+manufactured from a single sentence, and a band routes a real referral.
+
+Prompt instructions did not fix it; a second attempt produced six items. The **span-overlap
+backstop** in `lib/extraction/validate.ts` now demotes items whose evidence overlaps an existing
+item by ≥60%, turning them into probe targets rather than scores.
+
+Honest limit, same shape as the somatic backstop: this catches *overlapping* over-extraction. A
+model that invented three constructs from three genuinely different clauses of one sentence would
+pass it. It reduces the failure, it does not eliminate it.
+
 ### ⬜ The extraction LLM is a free-tier stopgap
 
 The build spec (§17.1) recommends Claude Sonnet at `temperature = 0`, because structured-output
@@ -135,8 +167,32 @@ Consequences, stated plainly:
   but expect more failed turns than with a stronger model.
 - **Free tiers commonly train on submitted data.** Acceptable here only because no real patient
   audio enters this build at all. It would not be acceptable in a pilot.
+- **xAI Grok was the first choice and is not usable**: the key authenticates but the account has no
+  credits (`403 permission-denied`). It is not free without purchase.
+- **Model ids churn.** `x-ai/grok-4-fast:free` was deprecated between being written as the default
+  and first being called. Re-run `npx tsx scripts/compare-llms.ts` rather than guessing a
+  replacement.
 
 Switching provider is one environment variable (`LLM_PROVIDER`); no call site changes.
+
+### ⬜ Generated clinical text needed three corrections, found by reading the output
+
+Each was caught by inspecting a real handover rather than by a test, and each is now constrained:
+
+1. **A fabricated escalation line.** On a screening with no escalation, the model wrote *"Safety
+   escalation: routine CHP follow-up and re-screen at the next scheduled visit."* To a clinician
+   skimming in fifteen seconds that reads as though an escalation occurred. The model is now told
+   nothing about escalation status at all — that fact is carried only by the deterministic header,
+   which cannot hedge or invent it.
+2. **A false cut-off.** It wrote *"Using PHQ-9 (0–27), cut-off 3"*. The threshold of 3 belongs to
+   PHQ-2 and GAD-2 only. Now explicitly forbidden.
+3. **Glosses that were questionnaire item names, not translations.** *"mawazo mengi sana"
+   [Worrying about many things]* — the GAD-7 item label, not what her words mean. Caused by my own
+   prompt placing the construct label beside the quote. FR-21's gloss is a translation of HER
+   WORDS; this is now stated with a worked example.
+
+**The general lesson, which applies to whatever model is used next:** generated clinical prose
+needs reading, not just schema-checking. None of these three would have failed a JSON validator.
 
 ### ⬜ Sahara's transcript field name is inferred, not confirmed
 

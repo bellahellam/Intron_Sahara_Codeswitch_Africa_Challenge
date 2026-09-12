@@ -5,6 +5,7 @@ import { routeReferral } from "@/lib/clinical/route";
 import { isConstructId, type ConstructId } from "@/lib/clinical/constructs";
 import { bandForConfidence } from "@/lib/clinical/coverage";
 import { generateBackRead } from "@/lib/agent/summarise";
+import { dedupeQuotes } from "@/lib/agent/quotes";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -83,7 +84,7 @@ export async function POST(req: Request) {
   });
 
   const backRead = await generateBackRead({
-    quotes: quotes.slice(0, 6),
+    quotes: dedupeQuotes(quotes),
     scores,
     referral,
     escalated: session.escalated,

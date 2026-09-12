@@ -42,8 +42,13 @@ const PRESETS: Record<string, ProviderPreset> = {
   openrouter: {
     baseUrl: "https://openrouter.ai/api/v1",
     envKey: "OPENROUTER_API_KEY",
-    defaultModel: "x-ai/grok-4-fast:free",
-    structuredOutput: "json_object",
+    // CHOSEN BY MEASUREMENT, not reputation — see docs/llm-selection.md.
+    // Scored 3/3 schema-valid and 9/9 literal evidence spans on the three cases that matter
+    // (rumination, somatic-only, hedged risk), and got both behavioural calls right.
+    // Model ids churn; if this 404s, re-run `npx tsx scripts/compare-llms.ts` rather than
+    // guessing a replacement.
+    defaultModel: "nex-agi/nex-n2.5-pro:free",
+    structuredOutput: "json_schema",
     extraHeaders: { "X-Title": "MAMA-SAUTI" },
   },
   cerebras: {

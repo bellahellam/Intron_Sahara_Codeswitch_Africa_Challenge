@@ -58,11 +58,44 @@ NON-NEGOTIABLE RULES. Each is checked again in code after you answer, and a viol
 
 7. THIRD LANGUAGE. If a span is in a language that is not Kiswahili, English or Sheng (for example Kikuyu or Dholuo), put it in \`unrecognised_language_spans\` and extract nothing from it. Never guess at a Swahili reading.
 
-CONFIDENCE. Use the full range honestly. Below 0.60 the item will not be populated at all and the system will ask her about it instead, which is the correct outcome when you are unsure. Silence beats a guess.
+CONFIDENCE. Calibrate it, do not default to near-certainty. The number decides whether a human has to check your work, so inflating it removes the check.
+
+  0.90-1.00  She said this plainly and it can only mean this construct.
+  0.75-0.89  Clear, but it rests on one reading of an ambiguous phrase.
+  0.60-0.74  Probable. A health worker should confirm it with her before it is scored.
+  below 0.60 Do not populate. The system will ask her about it instead, which is the correct
+             outcome when you are unsure. Silence beats a guess.
+
+If you find yourself giving nearly every item above 0.95, you are not calibrating. Real speech is
+ambiguous and a screening that never asks the mother to confirm anything is not a screening.
+
+ONE PIECE OF EVIDENCE, ONE CONSTRUCT. Do not populate three neighbouring constructs from a single
+sentence because they are thematically adjacent. "I lie awake thinking about money" is evidence of
+sleep disturbance and of rumination. It is NOT separately evidence of "trouble relaxing", "feeling
+afraid something awful might happen" and "restlessness" as well. Each extra item you add from the
+same words inflates her score on constructs she never actually reported, and the score routes a
+real referral. Populate the construct the words are ABOUT, and leave the neighbours for a probe.
 
 IDIOMS. When a span matches a documented idiom from the lexicon, record its id in \`idiom_id\`. An idiom is EVIDENCE for a construct. It is never a diagnosis, and it never sets severity on its own — Kaiser et al. 2015 is explicit that "thinking too much" should not be read as a gloss for psychiatric disorder.
 
-Return ONLY the JSON object. No prose, no markdown fences.`;
+Return ONLY the JSON object. No prose, no markdown fences. Return an INSTANCE with real values — never the schema itself, never type names like "string" or "int" as values.
+
+Worked example. Transcript: "Mtoto akilala mimi sikulali. Nabaki tu nimekaa, naangalia dari."
+
+{"turn_index":0,
+ "language_profile":{"sw":1.0,"en":0.0,"sheng":0.0,"unknown":0.0},
+ "risk_flag":false,
+ "risk_evidence":null,
+ "items":[{"instrument":"PHQ9","item_number":3,"construct":"phq9_3",
+   "evidence_span":"Mtoto akilala mimi sikulali. Nabaki tu nimekaa, naangalia dari.",
+   "span_language":"sw","idiom_id":null,"severity_estimate":2,
+   "severity_basis":"reported as habitual, and she distinguishes her own wakefulness from the infant's",
+   "confidence":0.88,"somatic_only":false,
+   "reasoning":"She separates her own sleeplessness from the baby's waking, which is the clinically meaningful distinction."}],
+ "constructs_addressed_but_negative":[],
+ "unrecognised_language_spans":[]}
+
+Note the evidence_span in that example is copied character-for-character from the transcript. Yours must be too.`;
 
 export function buildExtractionPrompt(input: ExtractionPromptInput): { system: string; user: string } {
   const user = `TRANSCRIPT (turn ${input.turnIndex}, verbatim — quote from this and nothing else):

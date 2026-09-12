@@ -17,6 +17,13 @@ export interface OpenAICompatibleConfig {
   structuredOutput: "json_schema" | "json_object" | "none";
   /** Sent as an extra header by OpenRouter for attribution. Harmless elsewhere. */
   extraHeaders?: Record<string, string>;
+  /**
+   * Reasoning models on OpenRouter can spend the ENTIRE token budget on hidden reasoning and
+   * return `content: ""`, which reads to a caller as "the model said nothing". For a strict-JSON
+   * extraction task the reasoning trace buys us nothing we can use, so it is suppressed by
+   * default and the budget goes to the answer.
+   */
+  suppressReasoning?: boolean;
 }
 
 export class OpenAICompatibleAdapter implements LLMAdapter {
@@ -41,6 +48,11 @@ export class OpenAICompatibleAdapter implements LLMAdapter {
         { role: "user", content: req.user },
       ],
     };
+
+    if (this.cfg.suppressReasoning !== false) {
+      // OpenRouter-specific; ignored by providers that do not know it.
+      body.reasoning = { enabled: false };
+    }
 
     if (req.schema && this.cfg.structuredOutput === "json_schema") {
       body.response_format = {
@@ -97,16 +109,26 @@ export class OpenAICompatibleAdapter implements LLMAdapter {
       });
     }
 
-    let payload: { choices?: Array<{ message?: { content?: string } }>; usage?: unknown };
+    let payload: { choices?: Array<{ message?: { content?: string; reasoning?: string } }>; usage?: unknown };
     try {
       payload = JSON.parse(bodyText);
     } catch (cause) {
       throw new LLMError("schema", `${this.name} returned a non-JSON envelope.`, { adapter: this.name, cause });
     }
 
-    const text = payload.choices?.[0]?.message?.content;
-    if (typeof text !== "string") {
-      throw new LLMError("schema", `${this.name} returned no message content.`, { adapter: this.name });
+    const message = payload.choices?.[0]?.message;
+    const text = message?.content;
+    if (typeof text !== "string" || text.trim() === "") {
+      // Name the actual cause. "No content" plus a populated reasoning field means the model
+      // spent its budget thinking; that is a different fix from a genuine refusal or an error.
+      const spentOnReasoning = typeof message?.reasoning === "string" && message.reasoning.length > 0;
+      throw new LLMError(
+        "schema",
+        spentOnReasoning
+          ? `${this.name} returned only reasoning and no answer (${message!.reasoning!.length} chars of reasoning). Raise maxTokens or suppress reasoning.`
+          : `${this.name} returned no message content.`,
+        { adapter: this.name },
+      );
     }
 
     return { text, latencyMs: Date.now() - startedAt, meta: { model: this.cfg.model, usage: payload.usage } };

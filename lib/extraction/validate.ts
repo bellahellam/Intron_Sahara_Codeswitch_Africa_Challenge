@@ -19,7 +19,8 @@ import type { Extraction, ExtractionItem } from "./schema";
 export type DropReason =
   | "span_validation_failure"
   | "known_prompt_suppressed"
-  | "unknown_construct";
+  | "unknown_construct"
+  | "span_overlap_demoted";
 
 export interface DroppedItem {
   construct: string;
@@ -31,6 +32,8 @@ export interface DroppedItem {
 export interface ValidationResult {
   extraction: Extraction;
   dropped: DroppedItem[];
+  /** How many items the span-overlap backstop demoted to probe targets. */
+  overlapDemoted: number;
   /** Fired counter for the backstop. Watch it during testing: if it never fires, either the
    *  lexicon is too narrow or the model is already conservative, and it matters which. */
   somaticBackstopFired: number;
@@ -124,6 +127,94 @@ export function applySomaticBackstop(item: ExtractionItem): { item: ExtractionIt
   return { fired: false, item };
 }
 
+/** Character overlap between two spans, as a fraction of the shorter one. */
+function spanOverlap(a: string, b: string): number {
+  const x = normalise(a).replace(/\s+/g, " ").trim();
+  const y = normalise(b).replace(/\s+/g, " ").trim();
+  if (!x || !y) return 0;
+  const [shorter, longer] = x.length <= y.length ? [x, y] : [y, x];
+  if (longer.includes(shorter)) return 1;
+  // Token-level Jaccard against the shorter span, for partial overlaps.
+  const tx = new Set(tokenize(shorter).map((t) => t.token));
+  const ty = new Set(tokenize(longer).map((t) => t.token));
+  if (tx.size === 0) return 0;
+  let shared = 0;
+  for (const t of tx) if (ty.has(t)) shared += 1;
+  return shared / tx.size;
+}
+
+export const SPAN_OVERLAP_THRESHOLD = 0.6;
+
+/**
+ * THE SPAN-OVERLAP BACKSTOP.
+ *
+ * Not in the original spec, added because the behaviour it prevents was observed live: asked to
+ * extract from "Usiku sipati usingizi. Nakuwa na mawazo mengi sana, nafikiria kuhusu pesa,
+ * nafikiria kuhusu mtoto, mpaka asubuhi", the extraction model returned FIVE GAD-7 items — 1, 2,
+ * 3, 4 and 5 — four of them quoting the same rumination clause, every one at severity 2 and
+ * confidence ≥0.98. That is GAD-7 = 10, a "moderate" band, manufactured from one sentence about
+ * lying awake worrying.
+ *
+ * The prompt was told not to do this, twice, and did it anyway. §11.4b already established the
+ * principle for exactly this situation: a rule the model enforces about its own output is not
+ * enforcement. So this runs in code.
+ *
+ * The rule: items whose evidence spans overlap by ≥60% are competing readings of the SAME words.
+ * Keep one — the most complete quote, tie-broken by instrument order — and demote the rest below
+ * the population threshold so they become probe targets instead of scores.
+ *
+ * The asymmetry is deliberate and matches the somatic backstop: over-caution costs a probe,
+ * under-caution inflates a score on constructs she never reported, and the score routes a real
+ * referral.
+ *
+ * What this deliberately does NOT do: collapse items with genuinely different spans. One
+ * utterance can legitimately evidence sleep disturbance AND rumination, because those are
+ * different clauses. It is the same clause counted five times that is the error.
+ */
+export function applySpanOverlapBackstop(items: ExtractionItem[]): {
+  items: ExtractionItem[];
+  demoted: DroppedItem[];
+} {
+  const demoted: DroppedItem[] = [];
+  const clusters: ExtractionItem[][] = [];
+
+  for (const item of items) {
+    const cluster = clusters.find((c) => c.some((other) => spanOverlap(item.evidence_span, other.evidence_span) >= SPAN_OVERLAP_THRESHOLD));
+    if (cluster) cluster.push(item);
+    else clusters.push([item]);
+  }
+
+  const out: ExtractionItem[] = [];
+  for (const cluster of clusters) {
+    if (cluster.length === 1) {
+      out.push(cluster[0]);
+      continue;
+    }
+    // Keep the most complete quote. It is the one a CHP can most usefully read back.
+    const winner = cluster.slice().sort(
+      (a, b) =>
+        b.evidence_span.length - a.evidence_span.length ||
+        a.instrument.localeCompare(b.instrument) ||
+        a.item_number - b.item_number,
+    )[0];
+
+    for (const item of cluster) {
+      if (item === winner) {
+        out.push(item);
+        continue;
+      }
+      demoted.push({
+        construct: item.construct,
+        reason: "span_overlap_demoted",
+        detail: `evidence overlaps ${winner.construct} by >=${SPAN_OVERLAP_THRESHOLD}; demoted to a probe target rather than scored`,
+      });
+      out.push({ ...item, confidence: Math.min(item.confidence, 0.59) });
+    }
+  }
+
+  return { items: out, demoted };
+}
+
 export function validateExtraction(
   extraction: Extraction,
   transcript: string,
@@ -157,6 +248,9 @@ export function validateExtraction(
     kept.push(adjusted);
   }
 
+  const overlap = applySpanOverlapBackstop(kept);
+  dropped.push(...overlap.demoted);
+
   // ONE EXPLICIT EXCEPTION (§11.9 layer 1): a failed span on the top-level risk_flag suppresses
   // the QUOTE, never the FLAG. Validation exists to stop the system asserting things she did not
   // say; it must never be a path by which a risk signal disappears.
@@ -171,8 +265,9 @@ export function validateExtraction(
   }
 
   return {
-    extraction: { ...extraction, items: kept, risk_evidence: riskEvidence },
+    extraction: { ...extraction, items: overlap.items, risk_evidence: riskEvidence },
     dropped,
     somaticBackstopFired,
+    overlapDemoted: overlap.demoted.length,
   };
 }

@@ -104,23 +104,29 @@ export async function generateHandover(input: SummaryInput): Promise<SummaryResu
 
 HARD CONSTRAINTS:
 - 120 words maximum.
-- If there was a safety escalation, that is the FIRST line. Nothing precedes it.
-- Name the instrument and the cut-off used. Report the band in words.
-- Include the mother's own quotes VERBATIM AND UNTRANSLATED, each followed by a bracketed English gloss. Never replace her words with the gloss.
+- NEVER write the words "safety escalation", "escalation", "risk flag" or "no risk" anywhere in the note. Whether a safety escalation occurred is stated deterministically in a header above your text, which you do not write and cannot see. A generated sentence beginning "Safety escalation:" on a screening where none occurred reads to a clinician as though one did, and this note is skimmed in fifteen seconds.
+- Report the band in words. Do NOT invent or restate cut-offs: the scores and thresholds are given to you below and are already correct. Copy them, do not reason about them. In particular the threshold of 3 belongs to PHQ-2 and GAD-2 ONLY — PHQ-9 and GAD-7 do not have a cut-off of 3 and saying they do is a clinical error.
+- Include the mother's own quotes VERBATIM AND UNTRANSLATED, each followed by a bracketed English gloss. THE GLOSS IS A PLAIN ENGLISH TRANSLATION OF HER WORDS — what she said — and never the name of a questionnaire item. For example: "mawazo mengi" [many thoughts], not "mawazo mengi" [Worrying about many things]. Never replace her words with the gloss.
 - NO diagnosis, no disorder name, no ICD or DSM code, no medication, no treatment recommendation, no prognosis. This is a screening handover and the referral decision has already been made deterministically — do not re-reason it.
 - State plainly if the screen was incomplete.
 - Plain prose that survives being pasted into WhatsApp. No markdown, no headings, no bullet characters.
 
 Return ONLY the note.`;
 
+  // Deliberately NOT told whether an escalation occurred. That fact is carried by the
+  // deterministic header, which cannot hedge, cannot paraphrase, and cannot invent it.
   const user = `SCREENED: ${input.screenedAt.toISOString()}  CHP: ${input.chpCode}
-${input.escalated ? "SAFETY ESCALATION OCCURRED IN THIS SESSION. Lead with it.\n" : ""}INSTRUMENT: PHQ-9 (0-27) and GAD-7 (0-21). PHQ-2 / GAD-2 threshold 3, matching the IPMH trial.
+INSTRUMENT: PHQ-9 (0-27) and GAD-7 (0-21). PHQ-2 / GAD-2 threshold 3, matching the IPMH trial.
 SCORES: PHQ-9 ${input.scores.phq9} (${input.scores.phq9Band.replace("_", " ")}), GAD-7 ${input.scores.gad7} (${input.scores.gad7Band}), PHQ-2 ${input.scores.phq2}, GAD-2 ${input.scores.gad2}.
 COVERAGE: ${input.scores.coverage.phq9ItemsEvidenced}/9 PHQ-9 items evidenced, ${input.scores.coverage.gad7ItemsEvidenced}/7 GAD-7.
 ${input.incomplete ? "THE SCREEN WAS NOT COMPLETED. Say so.\n" : ""}${input.possibleUnderEndorsement ? "POSSIBLE UNDER-ENDORSEMENT: flat denial alongside strong somatic content. The clinician should know we suspected it.\n" : ""}REFERRAL (already decided, do not re-reason): ${input.referral.tier} — ${input.referral.reason}
 
-HER QUOTES (verbatim, untranslated; add a bracketed gloss after each):
-${input.quotes.map((q) => `- [${getConstruct(q.construct)?.labelEn ?? q.construct}] "${q.span}"`).join("\n")}
+HER QUOTES. Reproduce each verbatim, then a bracketed ENGLISH TRANSLATION OF THOSE WORDS. The
+construct name is given only so you know why the quote is in the record. It is NOT the gloss and
+must not be used as one.
+${input.quotes
+    .map((q) => `- "${q.span}"   (recorded against: ${getConstruct(q.construct)?.labelEn ?? q.construct})`)
+    .join("\n")}
 
 Write the note.`;
 

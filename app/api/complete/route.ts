@@ -5,6 +5,7 @@ import { routeReferral } from "@/lib/clinical/route";
 import { isConstructId, type ConstructId } from "@/lib/clinical/constructs";
 import { bandForConfidence } from "@/lib/clinical/coverage";
 import { generateBackRead, generateHandover, handoverHeader } from "@/lib/agent/summarise";
+import { dedupeQuotes } from "@/lib/agent/quotes";
 import { loadSomaticTerms } from "@/lib/safety/lexicon";
 import { tokenize } from "@/lib/safety/scan";
 
@@ -136,11 +137,12 @@ export async function POST(req: Request) {
   const possibleUnderEndorsement = detectUnderEndorsement(stored, scores.phq9);
 
   // ---- generated surfaces, each denylisted (FR-24a) ------------------------------------
-  const quotes = stored
-    .filter((i) => !i.somatic_only && bandForConfidence(i.confidence) !== "low")
-    .filter((i) => !clientState.get(`${i.construct}::${i.evidence_span}`)?.disputed)
-    .map((i) => ({ construct: i.construct, span: i.evidence_span }))
-    .slice(0, 6);
+  const quotes = dedupeQuotes(
+    stored
+      .filter((i) => !i.somatic_only && bandForConfidence(i.confidence) !== "low")
+      .filter((i) => !clientState.get(`${i.construct}::${i.evidence_span}`)?.disputed)
+      .map((i) => ({ construct: i.construct, span: i.evidence_span })),
+  );
 
   const summaryInput = {
     quotes,
