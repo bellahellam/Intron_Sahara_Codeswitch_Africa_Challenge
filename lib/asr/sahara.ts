@@ -40,21 +40,30 @@ export interface SaharaOptions {
 }
 
 /**
- * The docs do not pin down the transcript field name, and guessing silently is how a product
- * ships an empty string that looks like silence. We look through the plausible keys, and if none
- * is present we THROW with the response shape in the message so it is fixed in one edit.
+ * CONFIRMED against the live API on 12 Sep 2026, not inferred from the docs:
+ *
+ *   { "data": { "audio_file_name", "audio_transcript", "file_id",
+ *               "processed_audio_duration_in_seconds", "processing_status" },
+ *     "message": "file status found", "status": "Ok" }
+ *
+ * So the transcript is `data.audio_transcript`. The fallback keys are kept because the field
+ * name is undocumented and could change; the THROW below is kept because guessing silently is
+ * how a product ships an empty string that looks like silence.
+ *
+ * ⚠️ Note `processing_status` came back as "FILE_QUEUED" on a response that already CONTAINED a
+ * complete transcript. Do not gate the sync path on that field — it is not a completion signal.
  */
 function extractText(payload: unknown): string | null {
   if (typeof payload === "string") return payload;
   if (!payload || typeof payload !== "object") return null;
   const obj = payload as Record<string, unknown>;
 
-  const directKeys = ["transcript", "transcription", "text", "hypothesis", "result", "output"];
+  const directKeys = ["audio_transcript", "transcript", "transcription", "text", "hypothesis", "output"];
   for (const key of directKeys) {
     const v = obj[key];
     if (typeof v === "string") return v;
   }
-  // One level of nesting: { data: {...} }, { result: {...} }
+  // One level of nesting: { data: {...} } is the real shape.
   for (const key of ["data", "result", "response", "payload"]) {
     const v = obj[key];
     if (v && typeof v === "object") {
@@ -73,6 +82,21 @@ function statusOf(payload: unknown): string | null {
     if (typeof v === "string") return v;
   }
   return null;
+}
+
+function durationSecondsOf(payload: unknown): number | null {
+  const seek = (v: unknown): number | null => {
+    if (!v || typeof v !== "object") return null;
+    const obj = v as Record<string, unknown>;
+    const direct = obj["processed_audio_duration_in_seconds"];
+    if (typeof direct === "number") return direct;
+    for (const key of ["data", "result", "response", "payload"]) {
+      const nested = seek(obj[key]);
+      if (nested !== null) return nested;
+    }
+    return null;
+  };
+  return seek(payload);
 }
 
 function fileIdOf(payload: unknown): string | null {
@@ -197,7 +221,16 @@ export class SaharaAdapter implements ASRAdapter {
     return {
       text, // returned unmodified, per the contract
       latencyMs: Date.now() - startedAt,
-      meta: { path: "sync", model: this.name, raw: payload },
+      meta: {
+        path: "sync",
+        model: this.name,
+        // Sahara's own measurement of the audio. Preferred over the client's wall-clock timer
+        // for chars-per-second, because the deletion detector's whole job is to compare text
+        // volume against AUDIO duration, and the browser's timer includes UI lag either side.
+        audioDurationSeconds: durationSecondsOf(payload),
+        fileId: fileIdOf(payload),
+        raw: payload,
+      },
     };
   }
 

@@ -4,6 +4,7 @@
  *
  *   npm run smoke:llm
  */
+import "./env";
 import { getLLMAdapter, parseJsonLoose, LLMError } from "../lib/llm";
 import { EXTRACTION_JSON_SCHEMA, ExtractionSchema } from "../lib/extraction/schema";
 import { buildExtractionPrompt } from "../lib/extraction/prompt";

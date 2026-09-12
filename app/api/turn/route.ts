@@ -84,6 +84,10 @@ export async function POST(req: Request) {
   const buffer = Buffer.from(await audio.arrayBuffer());
   let transcript: string;
   let asrLatencyMs: number;
+  // Sahara reports the audio duration it actually processed. Prefer it over the browser's
+  // wall-clock timer for chars-per-second: the deletion detector compares text volume against
+  // AUDIO duration, and the client timer includes UI lag at both ends.
+  let measuredDurationSeconds: number | null = null;
 
   try {
     const result = await transcribeWithRetry(adapter, new Blob([new Uint8Array(buffer)], { type: audio.type }), {
@@ -92,6 +96,8 @@ export async function POST(req: Request) {
     });
     transcript = result.text;
     asrLatencyMs = result.latencyMs;
+    const reported = result.meta?.audioDurationSeconds;
+    if (typeof reported === "number" && reported > 0) measuredDurationSeconds = reported;
   } catch (err) {
     if (err instanceof ASRError) {
       await audit(sessionId, "asr_failed", { kind: err.kind, adapter: err.adapter, turnIndex });
@@ -110,7 +116,7 @@ export async function POST(req: Request) {
 
   const outcome = await processTurn({
     transcript,
-    durationSeconds: durationMs / 1000,
+    durationSeconds: measuredDurationSeconds ?? durationMs / 1000,
     turnIndex,
     coverage,
     probeIssued: issued?.text ?? null,
@@ -168,6 +174,7 @@ export async function POST(req: Request) {
     cps: outcome.deletion.cps,
     deletionSuspected: outcome.deletion.deletionSuspected,
     deletionDetectorCalibrated: outcome.deletion.calibrated,
+    durationSource: measuredDurationSeconds !== null ? "asr_reported" : "client_timer",
     extractionMs: outcome.timings.extractionMs,
     safetyMs: outcome.timings.safetyMs,
     itemsProduced: outcome.extraction?.items.length ?? 0,

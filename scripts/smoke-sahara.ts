@@ -9,6 +9,7 @@
  * It prints the raw response shape on failure, which is how the transcript field name gets
  * confirmed rather than guessed (see extractText in lib/asr/sahara.ts).
  */
+import "./env";
 import { readFileSync, existsSync } from "node:fs";
 import { SaharaAdapter } from "../lib/asr/sahara";
 import { ASRError } from "../lib/asr/types";
