@@ -8,6 +8,8 @@ import { generateBackRead, generateHandover, handoverHeader } from "@/lib/agent/
 import { dedupeQuotes } from "@/lib/agent/quotes";
 import { loadSomaticTerms } from "@/lib/safety/lexicon";
 import { tokenize } from "@/lib/safety/scan";
+import { canAccessChp } from "@/lib/auth/session";
+import { accessDenied, authenticationRequired, getRequestAuth } from "@/lib/auth/guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -41,6 +43,8 @@ interface StoredItem {
  *           the record id only after the row exists; the client shows nothing until it does.
  */
 export async function POST(req: Request) {
+  const auth = getRequestAuth(req);
+  if (!auth) return authenticationRequired();
   const body = (await req.json().catch(() => null)) as {
     sessionId?: string;
     items?: ClientItemState[];
@@ -66,6 +70,7 @@ export async function POST(req: Request) {
       { status: 404 },
     );
   }
+  if (!canAccessChp(auth, session.chpCode)) return accessDenied();
   if (!session.consentGranted || session.status === "withdrawn") {
     return NextResponse.json(
       { error: "consent_required", messageSw: "Ruhusa haipo.", messageEn: "Consent is not in place." },

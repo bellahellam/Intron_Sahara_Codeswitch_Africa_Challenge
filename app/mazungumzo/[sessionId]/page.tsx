@@ -208,11 +208,6 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
           <div className="rounded-md border border-warning bg-white px-3 py-2 text-sm">
             <p className="font-medium text-warning">! {COPY.states.deletionSuspected.sw}</p>
             <p className="gloss not-italic">{COPY.states.deletionSuspected.en}</p>
-            {!lastTurn.deletion.calibrated && (
-              <p className="mt-1 text-xs text-neutral-500">
-                Kizingiti hakijapimwa bado (detector not yet calibrated against the benchmark set).
-              </p>
-            )}
           </div>
         )}
 

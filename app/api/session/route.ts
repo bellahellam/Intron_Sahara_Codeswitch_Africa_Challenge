@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma, audit } from "@/lib/db";
 import { emptyCoverage } from "@/lib/clinical/coverage";
 import { toJsonColumn } from "@/lib/db";
+import { canAccessChp } from "@/lib/auth/session";
+import { accessDenied, authenticationRequired, getRequestAuth } from "@/lib/auth/guard";
 
 export const runtime = "nodejs";
 
@@ -10,6 +12,8 @@ export const runtime = "nodejs";
  * session carries `consentGranted: false` until then. FR-03's gate reads that column.
  */
 export async function POST(req: Request) {
+  const auth = getRequestAuth(req);
+  if (!auth) return authenticationRequired();
   const body = (await req.json().catch(() => null)) as {
     chpCode?: string;
     motherId?: string;
@@ -26,6 +30,7 @@ export async function POST(req: Request) {
   }
 
   const chpCode = body.chpCode.trim().toUpperCase();
+  if (!canAccessChp(auth, chpCode)) return accessDenied();
   await prisma.chp.upsert({ where: { code: chpCode }, create: { code: chpCode }, update: {} });
 
   let motherId = body.motherId;

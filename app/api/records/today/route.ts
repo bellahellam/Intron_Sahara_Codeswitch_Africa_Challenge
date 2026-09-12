@@ -2,19 +2,25 @@ import { NextResponse } from "next/server";
 import { prisma, fromJsonColumn } from "@/lib/db";
 import { PHQ9_BAND_LABELS_SW, type Phq9Band } from "@/lib/clinical/score";
 import { TIER_LABELS_SW, type ReferralTier } from "@/lib/clinical/route";
+import { canAccessChp } from "@/lib/auth/session";
+import { authenticationRequired, getRequestAuth } from "@/lib/auth/guard";
 
 export const runtime = "nodejs";
 
 /** S1's list of today's screenings: mother name, time, band chip, tier chip. */
 export async function GET(req: Request) {
+  const session = getRequestAuth(req);
+  if (!session) return authenticationRequired();
   const chp = new URL(req.url).searchParams.get("chp");
   if (!chp) return NextResponse.json({ records: [] });
+  const chpCode = chp.toUpperCase();
+  if (!canAccessChp(session, chpCode)) return NextResponse.json({ records: [] });
 
   const since = new Date();
   since.setHours(0, 0, 0, 0);
 
   const rows = await prisma.screeningRecord.findMany({
-    where: { chpCode: chp.toUpperCase(), createdAt: { gte: since } },
+    where: { chpCode, createdAt: { gte: since } },
     orderBy: { createdAt: "desc" },
     include: { mother: { select: { displayName: true } } },
   });

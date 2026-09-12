@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma, fromJsonColumn } from "@/lib/db";
 import { emptyCoverage } from "@/lib/clinical/coverage";
+import { canAccessChp } from "@/lib/auth/session";
+import { accessDenied, authenticationRequired, getRequestAuth } from "@/lib/auth/guard";
 
 export const runtime = "nodejs";
 
 /** Session state for S6, which must render every item accumulated across turns. */
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = getRequestAuth(req);
+  if (!auth) return authenticationRequired();
   // Next 16: route params arrive as a Promise and must be awaited before use.
   const { id } = await params;
   const session = await prisma.session.findUnique({
@@ -19,6 +23,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       { status: 404 },
     );
   }
+  if (!canAccessChp(auth, session.chpCode)) return accessDenied();
 
   const items = session.turns.flatMap((t) => {
     const extraction = fromJsonColumn<{ items?: unknown[] }>(t.extractionJson, {});
