@@ -1,0 +1,23 @@
+node_modules/
+.next/
+out/
+build/
+.env
+.env.local
+.env*.local
+*.db
+*.db-journal
+prisma/dev.db*
+.DS_Store
+npm-debug.log*
+.vercel
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# benchmark
+bench/__pycache__/
+bench/.venv/
+.venv/
+__pycache__/
+*.pyc
+results/raw/

@@ -1,0 +1,17 @@
+id,phrase,register,gloss,phq9_gad7_mapping,source,doi_or_pmcid,confidence
+ID01,kufikiria sana,kiswahili,"thinking too much; excessive rumination","phq9_2;phq9_3;gad7_1;gad7_3","Mendenhall 2019; Panneh 2022; Owidi 2025; Nyongesa/Kumar 2022",PMC9685887,high
+ID02,kufikiri sana,kiswahili,"thinking too much (variant form)","phq9_2;phq9_3;gad7_1;gad7_3","Mendenhall 2019; Panneh 2022",PMC9685887,high
+ID03,mawazo mengi,kiswahili,"many thoughts","phq9_3;gad7_1","Owidi 2025; Angwenyi 2024",PMC11684234,high
+ID04,msongo wa mawazo,kiswahili,"crowding/pressure of thoughts; how participants named depression","phq9_global","Panneh 2022 (n=17)",PMC9685887,high
+ID05,dhiki,kiswahili,"stress; agony","gad7_global","Mendenhall 2019; Panneh 2022 (n=23)",PMC9685887,high
+ID06,huzuni,kiswahili,"sadness/grief. RESERVED for severe events such as death; use kusikitika for milder low mood","phq9_2","Mendenhall 2019; Wahid 2025",,high
+ID07,kuchoka moyo,kiswahili,"having a tired heart; expanded by participants as 'ni kama nina mzigo mzito' (as if carrying a heavy burden)","phq9_1;phq9_4","Swahili BDI-II adaptation",PMC4892521,high
+ID08,majeraha ya moyo,kiswahili,"heart wounds; trauma sequelae. TRAUMA FLAG ONLY, does not map to PHQ-9","trauma_flag","Wen et al. 2023",PMC10623154,high
+ID09,kusumbuka akili,kiswahili,"mentally disturbed","phq9_global","Panneh 2022",PMC9685887,medium
+ID10,kitu inanisumbua,kiswahili,"something is disturbing me","gad7_1","Owidi 2025",,medium
+ID11,siko sawa,kiswahili_sheng,"I am not okay","phq9_global","Owidi 2025",,low
+ID12,niko na stress,sheng,"I have stress","gad7_global","Owidi 2025",,medium
+ID13,sifeel poa,sheng,"I don't feel fine","phq9_global","Owidi 2025",,low
+ID14,sina ladha ya kula chakula,kiswahili,"I do not feel the taste of food; proposed as a comprehensible replacement for the standard PHQ-9 appetite item","phq9_5","Nyongesa/Kumar 2022",PMC9754261,high
+ID15,pagawa,kiswahili,"insanity. RECOGNITION ONLY - never appears in output copy (10.9)","severe_mh_flag","Panneh 2022 (n=16)",PMC9685887,medium
+ID16,kujitia kitanzi,kiswahili,"suicide (lit. to put a noose on oneself). ALSO IN SAFETY LEXICON as SL01","safety_lexicon","Panneh 2022 (n=6)",PMC9685887,high

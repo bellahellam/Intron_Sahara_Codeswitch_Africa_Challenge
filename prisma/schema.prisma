@@ -1,0 +1,151 @@
+// MAMA-SAUTI — §17.8 minimal schema, 6 tables.
+//
+// Running on SQLite today so the app works without provisioning; written with Postgres
+// semantics so the move is a DATABASE_URL change plus the two edits noted below.
+//
+// To move to Postgres (Neon/Supabase):
+//   1. datasource provider = "postgresql"
+//   2. every `String` field whose name ends in `Json` becomes `Json` (jsonb), and the
+//      parse/stringify helpers in lib/db.ts become identity functions.
+// Nothing else changes. No application code reads these columns directly.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Chp {
+  code      String   @id
+  name      String?
+  chu       String?
+  createdAt DateTime @default(now())
+
+  mothers  Mother[]
+  sessions Session[]
+}
+
+model Mother {
+  id          String   @id @default(uuid())
+  displayName String
+  age         Int?
+  anonymous   Boolean  @default(false)
+  chpCode     String
+  createdAt   DateTime @default(now())
+
+  chp      Chp               @relation(fields: [chpCode], references: [code])
+  sessions Session[]
+  records  ScreeningRecord[]
+
+  @@index([chpCode, createdAt])
+}
+
+model Session {
+  id        String  @id @default(uuid())
+  motherId  String
+  chpCode   String
+
+  // Consent. FR-03: the server rejects any audio upload for a session without
+  // consentGranted == true. This column is the gate, not a UI flag.
+  consentGranted Boolean   @default(false)
+  consentAt      DateTime?
+  scriptVersion  String?
+  audioRetained  Boolean   @default(false)
+
+  languageProfileJson String? // { sw, en, sheng, unknown }
+  coverageJson        String? // construct -> CoverageState
+  probeIssuedJson     String? // turnIndex -> probe text, for known-prompt suppression (FR-11a)
+
+  // §11.8 rule 1: latched, not derived. Once a session escalates, facility_urgent
+  // cannot be lowered by any subsequent edit. Only a human can raise it.
+  escalated   Boolean   @default(false)
+  escalatedAt DateTime?
+
+  status    String   @default("active") // active | escalated | review | completed | withdrawn | declined
+  termination String?                   // short_path_negative | coverage | turn_budget | manual
+  startedAt DateTime @default(now())
+  endedAt   DateTime?
+
+  mother      Mother            @relation(fields: [motherId], references: [id], onDelete: Cascade)
+  chp         Chp               @relation(fields: [chpCode], references: [code])
+  turns       Turn[]
+  records     ScreeningRecord[]
+  auditEvents AuditEvent[]
+
+  @@index([motherId, startedAt])
+}
+
+model Turn {
+  id         String   @id @default(uuid())
+  sessionId  String
+  idx        Int
+  durationMs Int
+
+  // Transcript is purged at session completion (§17.8). Audio is never written here at all.
+  transcript String?
+
+  cps                Float?
+  deletionSuspected  Boolean @default(false)
+  asrModel           String?
+  asrLatencyMs       Int?
+  languageSpansJson  String?
+  extractionJson     String?
+  droppedItemsJson   String? // span-validation and known-prompt failures — the hallucination canary
+  createdAt          DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, idx])
+}
+
+model ScreeningRecord {
+  id          String   @id @default(uuid())
+  sessionId   String
+  motherId    String
+  chpCode     String
+  scoresJson      String
+  itemsJson       String
+  riskJson        String
+  referralJson    String
+  asrJson         String
+  disclaimersJson String
+  handoverEn      String?
+  backReadSw      String?
+  createdAt   DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  mother  Mother  @relation(fields: [motherId], references: [id], onDelete: Cascade)
+
+  @@index([motherId, createdAt])
+}
+
+model AuditEvent {
+  id        String   @id @default(uuid())
+  sessionId String?
+  kind      String
+  // kinds: consent_granted, consent_declined, consent_withdrawn, safety_hit, escalation_ack,
+  //        item_disputed, item_corrected, span_validation_failure, known_prompt_suppressed,
+  //        somatic_backstop_fired, denylist_blocked, persist_retry, audio_purged,
+  //        transcript_purged, extraction_failed, manual_risk_flag
+  payloadJson String?
+  createdAt   DateTime @default(now())
+
+  session Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+}
+
+// §9.3: a single anonymous counter survives a withdrawal-after-escalation. No identifier,
+// no timestamp finer than the day, no content. It exists so a pilot can detect whether the
+// escalation UI is frightening people into withdrawing. Same shape for declined consent.
+model AnonymousCounter {
+  id    String @id // e.g. "declined:2026-09-11", "withdrawn_after_escalation:2026-09-11"
+  kind  String
+  day   String
+  count Int    @default(0)
+
+  @@index([kind, day])
+}

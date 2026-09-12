@@ -1,0 +1,45 @@
+id,phrase,language,register,form,severity,source,clinician_reviewed,added_at
+SL01,kujitia kitanzi,sw,kiswahili,idiomatic,active_intent,"Panneh 2022 PMC9685887 - attested Swahili term for suicide",false,2026-09-11
+SL02,kujiua,sw,kiswahili,explicit,active_intent,"spec 11.4a grid - explicit/Kiswahili",false,2026-09-11
+SL03,kujidhuru,sw,kiswahili,explicit,active_intent,"spec 11.4a grid - explicit/Kiswahili",false,2026-09-11
+SL04,nitajiua,sw,kiswahili,explicit,active_intent,"inflected form of SL02",false,2026-09-11
+SL05,nataka kufa,sw,kiswahili,explicit,ideation,"spec 11.4a grid",false,2026-09-11
+SL06,nataka kujiua,sw,kiswahili,explicit,active_intent,"inflected form of SL02",false,2026-09-11
+SL07,nafikiria kujiua,sw,kiswahili,explicit,ideation,"hedged-intent form of SL02",false,2026-09-11
+SL08,kujinyonga,sw,kiswahili,idiomatic,active_intent,"hanging; companion form to SL01",false,2026-09-11
+SL09,kunywa sumu,sw,kiswahili,idiomatic,active_intent,"pesticide/poison ingestion - the commonest method in rural Kenya",false,2026-09-11
+SL10,kumaliza maisha yangu,sw,kiswahili,idiomatic,active_intent,"to end my life",false,2026-09-11
+SL11,ingekuwa poa kama singekuwepo,sw,kiswahili,hedged,passive_ideation,"spec 5.3 and 11.4a grid - hedged/Kiswahili",false,2026-09-11
+SL12,afadhali nisingekuwepo,sw,kiswahili,hedged,passive_ideation,"variant of SL11",false,2026-09-11
+SL13,heri nisingezaliwa,sw,kiswahili,hedged,passive_ideation,"better if I had never been born",false,2026-09-11
+SL14,nimechoka na maisha,sw,kiswahili,passive,passive_ideation,"spec 11.4a grid - passive/Kiswahili",false,2026-09-11
+SL15,sitaki kuamka,sw,kiswahili,passive,passive_ideation,"spec 11.4a grid - passive/Kiswahili",false,2026-09-11
+SL16,siwezi kuendelea,sw,kiswahili,passive,hopelessness,"spec 11.4a grid - passive",false,2026-09-11
+SL17,maisha hayana maana,sw,kiswahili,passive,hopelessness,"life has no meaning - the second door offered by the item-9 probe (11.6a)",false,2026-09-11
+SL18,sioni sababu ya kuishi,sw,kiswahili,passive,hopelessness,"no reason to live",false,2026-09-11
+SL19,sina tumaini,sw,kiswahili,passive,hopelessness,"I have no hope",false,2026-09-11
+SL20,mtoto atakuwa sawa bila mimi,sw,kiswahili,third_person,passive_ideation,"spec 11.4a grid - third_person/Kiswahili",false,2026-09-11
+SL21,watakuwa bora bila mimi,sw,kiswahili,third_person,passive_ideation,"variant of SL20",false,2026-09-11
+SL22,familia yangu itakuwa sawa bila mimi,sw,kiswahili,third_person,passive_ideation,"variant of SL20",false,2026-09-11
+SL23,kill myself,en,english,explicit,active_intent,"spec 11.4a grid - explicit/English",false,2026-09-11
+SL24,hurt myself,en,english,explicit,active_intent,"spec 11.4a grid - explicit/English",false,2026-09-11
+SL25,harm myself,en,english,explicit,active_intent,"variant of SL24",false,2026-09-11
+SL26,end my life,en,english,explicit,active_intent,"spec 11.4a grid",false,2026-09-11
+SL27,take my own life,en,english,explicit,active_intent,"spec 11.4a grid",false,2026-09-11
+SL28,commit suicide,en,english,explicit,active_intent,"spec 11.4a grid",false,2026-09-11
+SL29,end it all,en,english,idiomatic,ideation,"spec 11.4a grid - idiomatic/English",false,2026-09-11
+SL30,better off without me,en,english,hedged,passive_ideation,"spec 11.4a grid - hedged/English",false,2026-09-11
+SL31,wish I was not here,en,english,hedged,passive_ideation,"variant of SL30",false,2026-09-11
+SL32,wish I had never been born,en,english,hedged,passive_ideation,"variant of SL30",false,2026-09-11
+SL33,do not want to wake up,en,english,passive,passive_ideation,"spec 11.4a grid - passive/English",false,2026-09-11
+SL34,cannot go on,en,english,passive,hopelessness,"spec 11.4a grid - passive/English",false,2026-09-11
+SL35,tired of living,en,english,passive,passive_ideation,"spec 11.4a grid",false,2026-09-11
+SL36,no reason to live,en,english,passive,hopelessness,"English counterpart of SL18",false,2026-09-11
+SL37,life has no meaning,en,english,passive,hopelessness,"English counterpart of SL17",false,2026-09-11
+SL38,the baby would be fine without me,en,english,third_person,passive_ideation,"spec 11.4a grid - third_person/English",false,2026-09-11
+SL39,they would be better off without me,en,english,third_person,passive_ideation,"variant of SL38",false,2026-09-11
+SL40,nimechoka na life,sheng,sheng,passive,passive_ideation,"code-switched variant of SL14 - Sheng is accepted as input though not claimed as a capability (5.1)",false,2026-09-11
+SL41,siwezi continue,sheng,sheng,passive,hopelessness,"code-switched variant of SL16",false,2026-09-11
+SL42,nimegive up,sheng,sheng,passive,hopelessness,"code-switched give-up form",false,2026-09-11
+SL43,sitaki kuwa alive,sheng,sheng,hedged,passive_ideation,"code-switched hedged form",false,2026-09-11
+SL44,nataka kuexit,sheng,sheng,idiomatic,ideation,"code-switched euphemism",false,2026-09-11

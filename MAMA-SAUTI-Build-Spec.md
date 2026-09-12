@@ -4,7 +4,7 @@
 
 **Version** 1.0 · **Date** 11 September 2026 · **Status** Implementation-ready · **Owner** Team of 2
 **Submission target** Intron Sahara CodeSwitch Africa Challenge, Health track, final submission **15 September 2026**
-**MVP functionally complete** Saturday 12 September 2026; polish, benchmark, demo and documentation through Monday 14 September
+**Build window** Two people, compressed to a single overnight push. Planned in elapsed hours from T+0, target T+34 to a submittable package (§24)
 
 > This document is the single source of truth. Where it conflicts with a diagram, a chat message, or an earlier draft, this document wins. Every requirement below traces to one of three justifications, marked inline: **[UV]** user value, **[CR]** competition requirement, **[SC]** measurable success criterion.
 
@@ -23,7 +23,7 @@
 
 ## 1.1 The product in one sentence
 
-**MAMA-SAUTI** is a Community Health Promoter's conversational screening assistant that listens to a Kenyan mother describe how she has been feeling since giving birth, in her own mix of Kiswahili, English and Sheng, and turns that unstructured conversation into a completed, evidence-linked PHQ-9 / GAD-7 screening record with a routed referral, without ever asking her to answer a translated questionnaire item.
+**MAMA-SAUTI** is a Community Health Promoter's conversational screening assistant that listens to a Kenyan mother describe how she has been feeling since giving birth, in her own natural mix of Kiswahili and English, and turns that unstructured conversation into a completed, evidence-linked PHQ-9 / GAD-7 screening record with a routed referral, without ever asking her to answer a translated questionnaire item.
 
 ## 1.2 Why this problem
 
@@ -72,7 +72,7 @@ The system does not stop at a transcript. Per turn it: scans deterministically f
 We would rather a judge hear these from us than find them.
 
 - **No criterion-validated Swahili PHQ-9 exists for a perinatal population.** The one Swahili criterion validation is Zanzibari, non-perinatal, and reports AUC 0.69 (Ceccolini et al. 2025, [doi:10.1186/s40359-025-03584-1](https://doi.org/10.1186/s40359-025-03584-1)). That is our psychometric ceiling *before* any ASR error is added. We report against it rather than around it.
-- **This is a 4-day competition build.** It is a working vertical slice with a reproducible benchmark, not a deployed system. §17.10 states exactly what a real pilot would additionally require.
+- **This is a roughly 34-hour competition build by two people.** It is a working vertical slice with a reproducible benchmark, not a deployed system. §17.10 states exactly what a real pilot would additionally require.
 - **The MVP calls a cloud ASR API.** Kenya's Digital Health Act 2023 s.47 restricts offshore transfer of personal health information. Our demo uses only licensed benchmark data and team-recorded synthetic audio, never real patient audio, and §20.3 specifies the in-country deployment path a pilot would need.
 
 ---
@@ -87,7 +87,17 @@ We would rather a judge hear these from us than find them.
 
 ⚠️ **UNVERIFIED, and it affects the model count.** The page contradicts itself: the Challenge Task section says "at least three speech models, including an Intron Sahara API, and at least two others" (= 3 total), while the What to Submit list says "comparing Sahara against **at least three other** speech models" (= 4 total). **RECOMMENDATION: benchmark 4 models (Sahara + 3).** This satisfies both readings at a marginal cost of roughly two hours of harness time. Locked in §18.
 
-⚠️ **UNVERIFIED: registration cutoff.** The hero block says registration closes 15 Sep; the Phase 2 timeline says "EOI closes 14 August". The team is registered, so this is moot, but do not rely on the site's dates for the submission mechanism. **ACTION: email voice@intron.io to confirm the submission channel and the 15 Sep timezone. No time-of-day is published.**
+**FACT, verified directly on [intron.io/compete](https://www.intron.io/compete/) on 11 Sep 2026: the page contradicts itself on the registration cutoff.** The hero block reads "⏳ Registration closes 15 September 2026"; the Phase 2 timeline reads "14 August 2026 EOI closes. Registration and Expression of Interest deadline." The team is registered, so this is moot for us, but it is the reason not to treat that page as authoritative on process.
+
+**FACT: no submission time-of-day or timezone is published for 15 September.** The Phase 2 entry reads only "Completed solutions and supporting materials are due." Phase 1 by contrast specified "6 August · 1pm WAT", so the omission is a genuine gap rather than an oversight in our reading.
+
+**FACT: no submission portal is named anywhere on the page.** The only form linked is the registration Google Form, which collects team metadata and has no upload fields. **How to submit is therefore an open question, not a formality.**
+
+**ACTION, today.** Ask via both available channels, because neither is a competition-specific address:
+- **voice@intron.io** ⚠️ **This is the voice API support address**, published at [docs.voice.intron.io](https://docs.voice.intron.io/docs/index/introduction) ("our support team is available at voice@intron.io"). It is the right channel for API credit and quota questions. It is not advertised as a competitions channel, so do not assume a competition query reaches the right person.
+- **[intron.io/contact](https://www.intron.io/contact/)**, the site's general contact form. No competition-specific email address is published anywhere on the challenge page.
+
+Ask three things: how to submit, the deadline timezone, and the participant API credit allowance.
 
 ## 2.2 Requirement → implication matrix
 
@@ -286,7 +296,7 @@ She will almost never say *"nina huzuni"* about ordinary sadness. ⚠️ Kilifi 
 |---|---|---|
 | **Kiswahili (Kenyan colloquial)** | Matrix language in ~70–85% of mother turns | Not Tanzanian *Kiswahili sanifu*. Kenyan phonology and lexicon. |
 | **English** | Embedded, high clinical density | Carries administrative and, critically, **affective** vocabulary. |
-| **Sheng** | Embedded, register-marking | Nairobi urban youth variety. Dominant with mothers under ~28. `sifeel poa`, `niko na stress`, `poa`, `fiti`. |
+| **Sheng** | Present in the data, **out of scope for MVP claims** | Nairobi urban youth variety, common with mothers under ~28: `sifeel poa`, `siko sawa`, `poa`. ⚠️ **Scope decision: Sheng is accepted as input and recorded when it appears, but MAMA-SAUTI makes no performance claim about it, sets no target for it, and does not lead with it.** It is in no model's training distribution, so any result would be an artefact of that absence rather than a finding about this product. **It is a first-class research question (§29.5), not an MVP capability.** |
 | **Kikuyu / Dholuo / Kamba** | Occasional insertion | ⚠️ **Out of MVP scope.** Sahara's code-switched pair is Swahili-English (`sw`). If a mother inserts a third language, the system must degrade gracefully (§21) rather than fail, and this limitation must be stated in the submission. |
 
 **Sahara configuration:** `use_language_asr_input="sw"`. **FACT:** in Sahara's API, the code-switched pair *is* the language code. `sw` = Swahili-English code-switched. There is no separate "enable code-switching" flag.
@@ -431,7 +441,7 @@ The measure of success is not that MAMA-SAUTI is widely used. It is that materna
 > **MAMA-SAUTI**
 > **is a** voice-first screening assistant
 > **that helps them** complete a validated mental health screen and route a referral without interrupting the conversation to fill in a form,
-> **by** listening to the mother's natural code-switched Kiswahili-English-Sheng speech, mapping her own somatic idioms onto PHQ-9 and GAD-7 constructs, and quoting her verbatim as the evidence for every score.
+> **by** listening to the mother's natural code-switched Kiswahili-English speech, mapping her own somatic idioms onto PHQ-9 and GAD-7 constructs, and quoting her verbatim as the evidence for every score.
 >
 > **Unlike** SMS platforms, which depressed women demonstrably use less, and unlike every existing voice tool in the region, which makes the speaker choose one language at registration,
 > **it** treats mid-sentence code-switching as the normal case and refuses to emit any score it cannot trace to something the mother actually said.
@@ -448,7 +458,9 @@ The measure of success is not that MAMA-SAUTI is widely used. It is that materna
 | **Perinatal mental health screening, digital** | **Essentially nobody.** PROMPTS offers reactive referral with no instrument attached |
 | **All three combined** | **Does not exist anywhere in Africa** |
 
-**RECOMMENDATION, and we mean this operationally, not rhetorically.** Talk to **Jacaranda Health** this week, before or immediately after submission. They have 3 million mothers, county-level public-sector integration, a Swahili LLM (UlizaLlama), a working IVR stack, a published admission of no audio support, and a postpartum-depression referral pathway **with no screener attached to it**. They are either the obvious pilot partner or the obvious competitor, and it is far cheaper to learn which now. Naming them in the submission as an intended partner strengthens the real-world-impact score rather than weakening it.
+**RECOMMENDATION for the post-competition phase, not for this build.** **Jacaranda Health** is the natural first conversation once there is something to show. They have ~3 million mothers, county-level public-sector integration, a Swahili LLM (UlizaLlama), a working IVR stack, a published admission of no audio support, and a postpartum-depression referral pathway **with no screener attached to it**. They are either the obvious pilot partner or the obvious competitor.
+
+⚠️ **Do not contact them during the build, and do not name them in the submission as a partner.** There is no time to have the conversation properly, an unanswered email is not a partnership, and implying a relationship that does not exist is the endorsement failure §27 warns about. Their published gap statement is citable as *evidence of the problem* (§6.5 table, Vatsa et al. 2025), which is a different and entirely legitimate use. **Partnership outreach belongs in the research and pilot phase (§29.5), once there is a working artefact and a benchmark to show them.**
 
 ## 6.6 Effect-size honesty
 
@@ -521,7 +533,7 @@ This is the strongest objection to the entire product category and it must be an
 
 Every feature below justifies itself against at least one of: **user value [UV]**, **competition requirement [CR]**, **product differentiation [PD]**, **technical credibility [TC]**, **demo value [DV]**, **safety requirement [SR]**. Anything that justifies against none of these is in §27, the anti-feature list, with a reason.
 
-**Hard constraint governing all of it: two people, MVP frozen Saturday 13 September, submission 15 September.** Roughly **four working days.** Scope is cut to fit, not aspired to.
+**Hard constraint governing all of it: two people, roughly 34 elapsed hours, MVP functionally complete at T+24** (§24.1). Scope is cut to fit, not aspired to.
 
 ## 8.2 MUST HAVE (the MVP; absence means no credible submission)
 
@@ -546,7 +558,7 @@ Every feature below justifies itself against at least one of: **user value [UV]*
 | M17 | Mobile-responsive layout verified at 360×640 | [CR][UV] |
 | M18 | Audio deleted after transcription by default; retention is opt-in per session | [SR][CR] |
 
-## 8.3 SHOULD HAVE (build only if Friday night is going well)
+## 8.3 SHOULD HAVE (build only if the MVP is complete ahead of T+24)
 
 | ID | Feature | Justification |
 |---|---|---|
@@ -556,6 +568,7 @@ Every feature below justifies itself against at least one of: **user value [UV]*
 | SH4 | Offline queueing of a completed record for later sync | [UV] Real connectivity. Genuinely time-expensive; see §27. |
 | SH5 | Session pause and resume across an interruption | [UV] |
 | SH6 | Per-construct confidence surfaced as a visual band on the record | [TC][UV] |
+| **SH7** | **Sahara speaker diarization via `use_diarization=TRUE`** | [TC][UV] **Gated on the T+24 milestone being met, and on the compatibility test in §11.3a passing.** One form field if it works; silently re-breaks the safety architecture if it does not. **Do not attempt before T+24.** |
 
 ## 8.4 COULD HAVE (post-competition)
 
@@ -569,10 +582,10 @@ CH1 CHO supervisor aggregate view · CH2 eCHIS / CHT integration via FHIR · CH3
 | **Any treatment or medication recommendation** | Same statutory basis. Also clinically wrong at this tier. |
 | **Mother-facing self-serve app** | Removes the human from a self-harm disclosure. Rejected on safety grounds in §4.2. |
 | **A language selector** | This is the anti-pattern the competition exists to eliminate. Its absence is a positioning statement. |
-| **Speaker diarization** | AfriSwitchCare Swahili has no speaker markers at all, so it cannot even be evaluated on our primary in-domain set. Cost without measurable benefit. |
+| **Speaker diarization** | **Not excluded on cost. See §11.3a, which sets out the real reasoning, the cheaper mitigation that replaces it, and the one test that could change this decision.** |
 | **Conversational TTS agent that interviews the mother** | A synthetic voice asking a mother about self-harm is worse than a trained human asking. It also burns the latency budget. The CHP is the interface. |
 | **Real patient audio in the MVP** | Digital Health Act s.47 + no IRB. Benchmark data and team-recorded synthetic audio only. |
-| **User accounts, password auth, RBAC** | A CHP code is sufficient for a 4-day demo. Real auth is pilot work. |
+| **User accounts, password auth, RBAC** | A CHP code is sufficient for a competition demo. Real auth is pilot work. |
 | **Analytics dashboard with charts** | Zero judging value, high build cost. |
 
 ## 8.6 The instrument decision, recorded
@@ -983,6 +996,44 @@ Per turn, a strict JSON object. **Every field is required. There are no optional
 3. **`somatic_only: true` caps `severity_estimate` at 1 and `confidence` at 0.59**, which forces it below the population threshold and converts it into a probe. See §12.4.
 4. **An item the mother explicitly denied goes into `constructs_addressed_but_negative`**, not into `items` with severity 0. Denial and absence are different states and the coverage map must distinguish them.
 5. **`risk_flag` is set on any expression of self-harm, hopelessness about existing, or wishing not to be alive**, including hedged forms. **Bias toward false positives. The cost asymmetry is not close.**
+6. **Known-prompt suppression.** Any `evidence_span` that substantially matches the probe text issued for that turn is **dropped, not scored**. See §11.3a; this is the rule that replaces diarization.
+
+## 11.3a Diarization: why it is out, and what replaces it
+
+**The real risk is not "we do not know who spoke." It is narrower and worse: the CHP's own words become the mother's clinical evidence.** The CHP reads a probe aloud containing the phrase *mawazo mengi*; the recording catches it; extraction quotes it back as evidence that the mother reported rumination. That is a false positive manufactured by the system's own question, on the exact construct the product exists to measure.
+
+**Diarization is cheap to obtain and was wrongly excluded on cost.** **FACT, verified on [docs.voice.intron.io](https://docs.voice.intron.io/docs/stt/file-upload-sync):** the file-sync endpoint accepts `use_diarization` (`TRUE | FALSE`) as a form field. It is one line, not a Python service. Any cost-based argument against it is wrong and has been removed from §8.5.
+
+**Three reasons it stays out anyway, in ascending order of importance.**
+
+1. **Latency.** It is post-processing on a round trip, inside a budget (§14.1) that is already tight enough to have needed revision once.
+
+2. **It cannot be measured.** ⚠️ AfriSwitchCare Swahili carries **no speaker markers at all** (`num_turns` is null; the card states Swahili transcripts have no `[Speaker N]` labels). So the primary in-domain benchmark set cannot score diarization accuracy. **In a competition judged on Technical Execution, an unmeasured component is worth less than a measured, explained absence.**
+
+3. **⚠️ It probably conflicts with the safety architecture, and this is the decisive one.** `use_diarization` is listed under **"Post processing options"**, which strongly suggests it is produced by Sahara's LLM post-processor rather than by an acoustic model. The product deliberately runs `use_disable_llm_corrections=TRUE` (corrections **off**) precisely so that the deterministic safety scan reads raw output and the verbatim quotes are genuinely hers (§17.5). **If diarization requires the post-processor, enabling it silently re-breaks both guarantees**: a correcting LLM returns upstream of the safety scan, and the quotes read back to the mother stop being literally what she said.
+
+**When to revisit, and it is not now.** Diarization is a **stretch item gated on the T+24 milestone**: attempt it only if the MVP is functionally complete on time, every §25.4 Agent Done box is ticked, and Milestone 5's polish box is not at risk. It is never a reason to extend T+24. If that gate is met, run the test below; if it is not, the decision stands and `LIMITATIONS.md` says so.
+
+**The test itself takes five minutes.** Call the endpoint with `use_diarization=TRUE` **and** `use_disable_llm_corrections=TRUE` together, on a two-speaker clip. Three possible outcomes:
+- **Speaker labels returned and corrections still off** → diarization is acoustic and independent. Reason 3 evaporates and only the measurement gap remains. **Add it as SH7 and ship it**, since at that point it is one form field and it strengthens the third-party story.
+- **Labels returned but the transcript is visibly smoothed** → the flag re-enables the post-processor. **Leave it off.** The safety guarantee outranks the attribution improvement.
+- **Flags are mutually exclusive, or labels are absent** → decision stands, and the result is worth one line in `BENCHMARK.md` because nobody else will have tested the interaction.
+
+**What replaces it, at roughly thirty minutes of work.**
+
+**(a) The turn boundary already is the diarization.** Push-to-talk means the CHP asks her question, *then* records (§10.1). Speaker separation is achieved by the UI affordance rather than by a model. Leakage happens only at the edges, when the CHP keeps recording while saying *"mmh, endelea"* or prompts mid-turn.
+
+**(b) Known-prompt suppression closes the dominant edge case.** The system **generated the probe**, so it knows exactly what the CHP was about to say. At span-validation time:
+
+```
+probe = state.probe_issued_for_turn(turn_index)      # may be null on turn 1
+if probe and token_overlap(normalise(span), normalise(probe)) >= 0.6:
+    drop(item); log("known_prompt_suppressed", item.construct)
+```
+
+No new dependency, no latency, no model. It catches the precise failure where the product quotes its own question back as her answer. **This is a better fit than diarization because it targets the actual risk rather than the general problem.**
+
+**(c) The third-party case is flagged, not solved.** A husband answering for her (§21.1) is a genuine harm and known-prompt suppression does not touch it. Full diarization would help, and the honest position is that **MVP mitigates this with a weak heuristic and says so in `LIMITATIONS.md`** rather than claiming coverage it does not have.
 
 ## 11.4 Idiom matching
 
@@ -1294,6 +1345,7 @@ Priority: **M** = Must (MVP), **S** = Should, **C** = Could. Every requirement c
 | **FR-09** | Deterministic safety scan runs on every raw transcript before extraction | M | Mother | Bilingual lexicon; fuzzy match ≥0.85; **contains no model**; a hit triggers `[S5]` within 500 ms of transcript receipt; **SPR = 1.00 on the safety test set is a release blocker** **[SR][CR]** |
 | **FR-10** | Extraction maps transcript to PHQ-9 and GAD-7 constructs | M | System | Strict JSON schema; every populated item has `evidence_span`, `confidence`, `severity_estimate`, `idiom_id`, `somatic_only` **[UV][PD]** |
 | **FR-11** | Every evidence span is validated as a literal substring of the transcript | M | System | Non-substring spans **drop the item and log**; never repaired; unit-tested with adversarial fixtures **[SR][TC]** |
+| **FR-11a** | **Known-prompt suppression: a span matching the probe issued for that turn is dropped** | M | Mother | Token overlap ≥0.6 against the normalised probe text drops the item and logs `known_prompt_suppressed`. Closes the case where the CHP reads a probe aloud, the recording catches it, and the system quotes its own question back as her evidence. **Replaces diarization for the dominant attribution failure; §11.3a explains why that is the better trade.** Fixture: a turn whose transcript contains the probe verbatim must yield zero items from it. **[SR][PD]** |
 | **FR-12** | Somatic-only evidence cannot populate a construct | M | Mother | `somatic_only == true` ⇒ `confidence ≤ 0.59` ⇒ not populated ⇒ enters probe tier 4; verified by test fixture **[SR][PD]** |
 | **FR-13** | Coverage state is maintained and visible | M | CHP | Five states per construct; a visible coverage affordance; no covered construct is re-probed **[CR-C3]** |
 | **FR-14** | Agent generates one targeted probe per turn in the mother's register | M | CHP | Exactly one question; ≤20 words; references her prior words when evidence exists; no clinical label; no leading form; shown with `Uliza`/`Ruka`; **never auto-spoken** **[CR-C3][PD]** |
@@ -1362,8 +1414,33 @@ Sahara down → the turn is retried with backoff; audio is retained so the mothe
 | **Vision** | Minimum 16 px body, 4.5:1 contrast, no meaning conveyed by colour alone (every confidence band carries a label and an icon, not just green/amber). |
 | **Motor** | ≥48 px targets. Primary control thumb-reachable in the lower third. No drag, no long-press, no swipe-only action. |
 | **Language diversity** | The core thesis. No language selection. Graceful degradation on a third language. |
-| **Connectivity** | Shell cached; past records readable offline; completed records queue (SH4). Screening itself requires network in MVP, and the UI says so plainly rather than failing mysteriously. |
+| **Connectivity** | Graded rather than binary. See §14.4a, which sets out exactly what works with no network, what degrades, and the one thing that cannot be made to work offline without creating a safety problem. |
 | **Ambient noise** | Pre-emptive audio-quality feedback rather than post-hoc failure. |
+
+## 14.4a Offline capability, graded
+
+Grace covers ~110 households on foot with prepaid, rationed data and unreliable coverage (§4.1). "Requires network" is not an acceptable answer for a product that lives in her hand, but "works offline" is a claim this architecture cannot honestly make, because transcription and extraction are both network calls. The honest position is a graded one.
+
+| Tier | Capability | Offline? | Cost to build |
+|---|---|---|---|
+| **0** | App shell loads; **S5 escalation card renders in full, with crisis numbers, hours, costs and scripts**; **manual risk flag (FR-26) works**; consent script displays; mother identity captured; past records readable | ✅ **Always. No network, ever.** | Low. Service worker + bundled JSON. **Already required** by §15.4 S5. |
+| **1** | A completed screening record queues locally and syncs when coverage returns, with the UI stating plainly that it is unsent | ✅ Degraded but complete | Moderate. This is SH4. |
+| **2** | **Capture-only fallback:** if coverage dies mid-session, the CHP keeps recording turns against a fixed fallback question list; audio is held locally; transcription, extraction, scoring and the agent loop all run when coverage returns | ⚠️ **Partial, and it changes the product.** See the warning below. | Moderate. IndexedDB audio queue plus a deferred pipeline. |
+| **3** | ASR, extraction, agent-generated probes, **automatic safety scan**, back-read, scoring | ❌ **Network required.** No local model fits in a web app on a mid-range Android. | n/a |
+
+### ⚠️ The safety consequence of Tier 2, and why it is a Should-Have rather than a Must
+
+**Tier 2 moves the automatic safety scan out of the room.** A mother discloses suicidal ideation at 11:00; coverage returns at 15:00; the deterministic lexicon fires four hours after Grace has walked away. **That is not a screening tool, it is a notification.** Three things follow, and all three are requirements rather than observations:
+
+1. **The manual risk flag (FR-26) is the offline safety control, and it must be Tier 0.** It is the reason §15.4 already requires the escalation card to render entirely from bundled local state. Grace does not need the model to tell her what she just heard. **The product's safety story offline rests on the trained human in the room, which is the same argument that justified the CHP-mediated design in the first place (§3.7).**
+2. **Tier 2 must announce itself.** A persistent banner: *"Hakuna mtandao. Tunarekodi tu. Ukisikia jambo la hatari, bofya alama ya hatari mwenyewe."* ("No network. We are only recording. If you hear something dangerous, press the risk flag yourself.") **The CHP must know the machine is not listening for risk right now.**
+3. **The back-read (FR-22) cannot happen in Tier 2**, because the mother has gone by the time there is a record to read to her. That breaks the third verification layer (§11.9). A Tier 2 record is therefore flagged `not_back_read` and **cannot be routed above `chp_followup` without a follow-up visit**, except where the CHP raised a manual flag, which latches `facility_urgent` as normal (§11.8 rule 1).
+
+### Recommendation
+
+**Build Tier 0 in the MVP; it is nearly free and it is already implied by the S5 requirements.** Ship Tier 1 if the T+24 gate is met. **Treat Tier 2 as post-competition**, because the three constraints above are real design work and rushing them produces a product that looks more capable offline than it safely is.
+
+**What to say in the submission:** the escalation path, the crisis contacts and the manual risk flag work with no network at all, by design and not by accident, because a mother in a one-room home in Kawangware does not have coverage on a schedule. That is a true, verifiable, and unusually concrete accessibility claim. **Do not claim offline screening.**
 
 ## 14.5 Security
 
@@ -1695,6 +1772,43 @@ Contrast: all text ≥4.5:1 against its ground; primary action ≥3:1 for the co
 | **Band chip** | Word first, number second: `Wastani (14)` not `14 – moderate`. |
 | **Disclaimer strip** | Neutral 200 ground, Neutral 700 text, always visible on S1/S7/S8, never dismissible. |
 
+## 16.5a Affordances
+
+§16.5 says what the components *are*. This says how each one **signals what it does before anyone touches it**, which is a separate problem and the one that matters most for this user.
+
+**Why it needs its own section here.** Grace has never used a voice assistant, will not read an onboarding tutorial, and is learning the product while conducting a clinical conversation in someone's home (§4.1). She has no spare attention for discovery. **Every control must be self-evident on first sight, and every state must be readable at a glance from a metre away**, because the mother can see the screen too and is forming her own judgement about what this device is doing.
+
+### The five rules
+
+1. **Shape carries meaning before colour does.** The record control is the only circle in the product. Cards are rectangles. Chips are pills. A user who cannot distinguish the green from the amber, in sunlight or with colour-vision deficiency, can still tell a control from a container.
+2. **Size encodes priority, exactly once per screen.** The largest interactive element is always the thing to do next. There is never a second element competing for that role (§16.2 principle 5).
+3. **Every icon carries its word.** No icon-only controls anywhere, including the ones that feel universally understood. A microphone glyph means "recording" only to people who have already learned that convention.
+4. **State is shown, never implied by absence.** "Not recording" is a visibly distinct resting state, not merely the lack of a pulse. "Unsent" is a banner, not a missing checkmark. **A user must never have to infer state from something that is not there.**
+5. **Disabled controls explain themselves.** A greyed primary action always carries the reason inline (*"Thibitisha vipengele vya njano kwanza"*, "Confirm the amber items first"). A disabled control with no explanation reads as a broken app, and Grace will conclude the phone is faulty rather than that she has a step remaining.
+
+### Affordance inventory
+
+| Element | What it must signal, unprompted | How |
+|---|---|---|
+| **Record control** | "Press here, and it is not currently listening" | The only circle on screen; filled primary green; the largest target; sits in the thumb zone; labelled `Bofya kurekodi`. At rest it does **not** pulse, so rest and active are unambiguous. |
+| **Recording state** | "It is listening **right now**, and it can hear you" | Pulsing halo at 0.8 Hz (the button itself does not resize, so the target never moves) + **a live amplitude meter that visibly responds to her voice**. The meter is the affordance that matters: it is the only element that proves the microphone is actually picking her up, and it does that job for the mother as much as for Grace. |
+| **Amplitude meter floor marker** | "Too quiet is a thing that can happen, and you are above or below it" | A fixed tick on the bar. Without it, a low reading looks like a low voice rather than a problem. |
+| **Elapsed timer** | "There is a limit and you are approaching it" | Tabular figures; turns amber at 100 s. |
+| **Evidence card** | "This is something *she* said, not something the phone decided" | Ochre left rule + her quote as the largest text on the card. **The visual hierarchy is the trust mechanism**: the design makes provenance obvious before anyone reads a word. |
+| **Idiom chip** | "This phrase was recognised from a known list, not inferred" | Pill shape, ochre, carries the matched term. Tapping shows the lexicon entry and its source. |
+| **Confidence band** | "This one needs you; that one does not" | Glyph + word + colour, all three. `✓ Ina uhakika` versus `! Thibitisha`. Amber cards are additionally the only cards with an outline. |
+| **Coverage strip** | "The screening has a shape, and you are partway through it" | 16 pips, filled / half / hollow / slashed. This is the single affordance that makes an open-ended conversation feel finite, which is what stops Grace ending a session early. |
+| **Probe card** | "A suggestion you may use or ignore, not an instruction" | Tinted surface, distinct from evidence cards, with `Uliza` **and** `Ruka` given equal visual weight. **`Ruka` must never look like the discouraged choice**, or the CHP's clinical judgement is being overridden by button styling. |
+| **Risk flag button** | "Always available, never alarming" | Persistent on every conversation screen, outline not filled, in a fixed position so it becomes muscle memory. **It must be findable under pressure without being looked for**, which is why position is fixed and never contextual. |
+| **Transcript disclosure** | "There is more underneath if you want it" | Collapsed by default with a count (`Ona maandishi kamili`). Signals depth without competing with the evidence cards (§2.2 C2). |
+| **Escalation card** | "Stop what you were doing" | Breaks every other visual rule at once: full-bleed, single colour used nowhere else, abrupt 120 ms entry. **Its affordance is discontinuity.** |
+| **Offline banner** | "The machine is not listening for risk right now" | Persistent, not dismissible, with the explicit instruction to use the manual flag (§14.4a). |
+| **Unsent record** | "This has not left the phone" | Banner plus a per-record marker in the list. **Never a silent retry**, because a silent retry means Grace believes a referral was sent when it was not. |
+
+### Anti-affordances to avoid
+
+No swipe-only actions, no long-press, no drag. No hidden gestures of any kind. No control that appears only on hover, which does not exist on touch. No infinite scroll on the record list. **No skeleton shimmer that resembles content**, because a user who cannot yet read fluently will try to tap it.
+
 ## 16.6 Motion
 
 Three animations exist. Nothing else moves.
@@ -1711,7 +1825,7 @@ Everything honours `prefers-reduced-motion`. No skeleton shimmer, no page transi
 
 ## 17.1 Stack recommendation
 
-**RECOMMENDATION: two artifacts, two owners, one interface contract.** With two people and four days, the parallelisation is the architecture.
+**RECOMMENDATION: two artifacts, two owners, one interface contract.** With two people and roughly 34 hours, the parallelisation *is* the architecture.
 
 | Layer | Choice | Why this and not the obvious alternative |
 |---|---|---|
@@ -1914,7 +2028,7 @@ Not "which model has the lowest WER." The question is: **does ASR quality on cod
 | **3** | **Jacaranda-Health/ASR-STT** (whisper-medium, sw+en bilingual, CC-BY-SA-4.0) | African, health-domain, **incumbent** | **The most product-relevant comparator that exists.** Built by the organisation that actually runs maternal health messaging for ~3M Kenyan mothers, reports WER 0.147, and claims code-switch strength. If Sahara does not beat the regional incumbent on our task, that is a finding worth publishing. |
 | **4** | **ElevenLabs Scribe v2** (`swa`) | Global, commercial, closed | ⚠️ Vendor self-rates Swahili at **≤10% WER**; AssemblyAI self-rates the same language at **25–50%**. That is a fivefold vendor disagreement on monolingual Swahili with no published eval set behind either claim. Testing it on real code-switched audio is a genuinely interesting question. ~$0.22/hr. **No benchmarking restriction found in its terms.** |
 
-**Optional 5th if Friday is going well:** Meta MMS `mms-1b-all` (ISO code `swh`, note: **not** `swa`), CC-BY-NC-4.0. A pure CTC architecture would round out the comparison, since every other entry is encoder-decoder or closed.
+**Optional 5th if the harness is finished and idle before T+29:** Meta MMS `mms-1b-all` (ISO code `swh`, note: **not** `swa`), CC-BY-NC-4.0. A pure CTC architecture would round out the comparison, since every other entry is encoder-decoder or closed.
 
 ## 18.3 Models deliberately excluded, and why (put this in the submission)
 
@@ -1968,8 +2082,7 @@ Not "which model has the lowest WER." The question is: **does ASR quality on cod
 | **B: Secondary, robustness** | `intronhealth/AfriSwitch`, config `swahili`, split `test` | **650 utterances, 3.89 h**, CMI 25.72, 10.29 switch points/utt | In-the-wild conversational. Tests whether findings hold outside clinical register. |
 | **C: First-party field set** | Recorded by the team | **28 utterances**, ~18 min | Satisfies competition requirement C12 with full metadata. **The only set carrying risk utterances and hand-assigned gold scores, so it is the only set on which Tier 2 SPR and all of Tier 3 can be computed.** See §18.5a. |
 
-**Both A and B are ⚠️ gated (CC BY-NC-SA 4.0) and require accepting terms on Hugging Face.**
-**→ ACTION, DAY 0, BLOCKING: request access to both datasets now. Approval latency is unknown and it gates the entire benchmark.** If access is not granted in time, C plus AfriSwitch's published statistics become the fallback, and the submission says so.
+**Both A and B are CC BY-NC-SA 4.0 and gated on Hugging Face. ✅ Access is granted to this team**, so the benchmark can use them directly. **The non-commercial term still binds redistribution: we evaluate on them and we do not ship their audio** (§20.5, and requirement C12 is satisfied with field set C instead).
 
 **Loading (config names are lowercase language names):**
 ```python
@@ -2020,7 +2133,7 @@ Dataset A is 12 simulated consultations across 12 conditions, of which **one is 
 | Numbers, dates, names | 3 | Including `saa nne usiku` clock offset |
 | **Safety phrases, lexicon-matched** | **4** | The SPR-seen set. One clip per `form` in §11.4a. |
 | **Safety phrases, held out** | **4** | **The SPR-held-out set, and the only safety number that means anything.** Written by whichever team member did *not* author the lexicon, after the lexicon was frozen, deliberately using phrasings it does not contain. **Non-negotiable.** |
-| Heavy Sheng | 3 | `sifeel poa`, `niko na stress`, `siko sawa` |
+| Sheng, observational only | 2 | `sifeel poa`, `siko sawa`. **Recorded and reported, but not scored against any target and not counted toward any headline metric** (§5.1). Present so the research track has a starting point (§29.5). |
 | Noise conditions | 2 | Same utterance, quiet room vs. background radio + infant |
 
 **Metadata schema, `data/fieldset_metadata.csv`:**
@@ -2124,7 +2237,7 @@ Every error is hand-categorised on a stratified sample of 100 utterances, ~20 pe
 | **Switch-boundary deletion** | **The hypothesis is fluent monolingual Swahili with the English simply gone.** Expected to dominate. |
 | **Switch-boundary substitution** | English word replaced by a phonetically similar Swahili word. Worse than deletion, because it is invisible to a reader. |
 | **Language collapse** | The whole utterance rendered in one language. Watch Whisper-auto specifically. |
-| **Sheng failure** | `sifeel poa`, `siko sawa`, `niko na stress` mangled. Sheng is in no model's training distribution. |
+| **Sheng, observational** | `sifeel poa`, `siko sawa` mangled. **Counted and described, never aggregated into a headline metric** (§5.1), because Sheng is absent from every model's training data and a number here measures that absence rather than anything about this product. |
 | **Idiom fragmentation** | `mawazo mengi` → `mawazo` + `mengi` split across a boundary, or `kufikiria sana` → `kufikiri sana`. Determines whether fuzzy matching is sufficient. |
 | **Numbers and dates** | Mixed numeral systems; **the `saa nne` clock offset**. |
 | **Names** | Expected to be the worst class. Justifies never deriving names from audio. |
@@ -2280,7 +2393,7 @@ Idiom lexicon: our compilation from published literature, with per-row citations
 | **Product used to diagnose** | Mother | High (legal + clinical) | No label anywhere in output; disclaimer on three screens and in the handover; `disclaimers[]` on every record; scoring is deterministic and inspectable | CHP or clinician may still verbalise a diagnosis. **Training control, not software control.** |
 | **CHP acts beyond scope** | CHP (legal) | High | Output framed as screen + referral; escalation script directs to the person and to services, never to intervention | ⚠️ **No Kenyan statute defines "screening."** Closes with an MOH letter (§17.10(7)), not with software. |
 | **Bias against non-standard accents / rural / older speakers** | Mothers | High | Benchmark stratified by noise condition; **⚠️ AfriSwitchCare and AfriSwitch contain NO speaker demographics at all** (confirmed absence, stated on the cards) | **We cannot measure accent bias with the available data. This is a stated limitation, not a solved problem.** A pilot must collect demographics prospectively. |
-| **Sheng under-served** | Younger mothers | Medium | Sheng in the lexicon and in field set C | Sheng is in no model's training distribution. Expect this to be the worst category. |
+| **Sheng under-served** | Younger mothers | Medium | Sheng entries remain in the lexicon so the system still *recognises* what it can; 2 observational clips in field set C | **Real and unmitigated. Sheng is in no model's training distribution, so this is a gap in the underlying speech technology rather than in this product.** MVP makes no claim here (§5.1) and states the limitation; closing it is a research contribution (§29.5). |
 | **Third party (husband) answers for her** | Mother | Medium | `third_party_speech_suspected` flag; no confident extraction; CHP prompted to seek privacy | Privacy is often physically unavailable in a one-room home. Real and unsolved. |
 | **Consent theatre (CHP taps without reading)** | Mother | Medium | Script kept to four sentences; largest text on the screen; version recorded | **Real residual risk. Software cannot fix it; training and supervision must.** Stated rather than claimed away. |
 | **Offshore processing of health data** | Mother, team (legal) | High | **No real patient audio in the MVP**; benchmark and synthetic audio only | Blocks a pilot until §17.10(1) is resolved. |
@@ -2316,7 +2429,8 @@ Idiom lexicon: our compilation from published literature, with per-row citations
 | Clipping / overload | Phone too close, loud room | Peak amplitude saturated | Degraded ASR | Live meter shows red; hint to move back |
 | Recording exceeds Sahara's limit | Long turn | Timer at 100 s | Turn truncated | Amber at 100 s, auto-stop at 110 s, turn preserved, prompt to continue in a new turn |
 | Browser suspends recording | Backgrounded, call incoming, screen lock | `MediaRecorder` state change | Partial audio | Detect, keep the partial, tell her what happened, offer re-record |
-| Third party speaks | Husband, mother-in-law, neighbour | ⚠️ **Weakly detectable without diarization, which we do not build** | Wrong person's words attributed | `third_party_speech_suspected` heuristic (register shift, pronoun mismatch); CHP prompted to seek privacy. **Acknowledged as a real, only-partly-mitigated failure.** |
+| **CHP's own words attributed to the mother** | CHP keeps recording while reading the probe or prompting mid-turn | **Known-prompt suppression (FR-11a)**, plus the turn boundary itself | **A false positive manufactured by the system's own question, on the construct it is measuring.** The highest-frequency attribution failure. | Item dropped, `known_prompt_suppressed` logged. **Watch this counter: if it fires often, the CHP is recording through her own speech and the training needs fixing, not the code.** |
+| Third party speaks | Husband, mother-in-law, neighbour | ⚠️ **Weakly detectable without diarization, which is out of scope per §11.3a** | Wrong person's words attributed | `third_party_speech_suspected` heuristic (register shift, pronoun mismatch); CHP prompted to seek privacy. **Acknowledged in `LIMITATIONS.md` as a real, only-partly-mitigated failure. Known-prompt suppression does not touch this case.** |
 
 ## 21.2 ASR failures
 
@@ -2336,7 +2450,7 @@ Idiom lexicon: our compilation from published literature, with per-row citations
 
 | Failure | Cause | Detection | Impact | Recovery |
 |---|---|---|---|---|
-| Sheng not recognised | Not in any model's training distribution | Low confidence, garbled span | Younger mothers under-served | Sheng in lexicon and field set C; probe rather than extract; **expect this to be the worst benchmark category and report it** |
+| Sheng not recognised | Not in any model's training distribution | Low confidence, garbled span | Younger mothers under-served | Probe rather than extract, as with any low-confidence span. **Not scored against a target** (§5.1); noted in `LIMITATIONS.md` and carried into the research track. |
 | Idiom fragmented across a boundary | `mawazo mengi` split, `kufikiria`→`kufikiri` | Lexicon miss where phonetics suggest a hit | Idiom evidence lost | Fuzzy matching ≥0.85 + stem variant sets |
 | Third language inserted (Kikuyu, Dholuo) | Out of the `sw` pair | Unrecognised span | Content lost | Mark `unrecognised_language`; **do not extract; do not hallucinate a Swahili reading**; prompt to repeat |
 | Swahili morphology on English stem (`kuconnect`, `nime-check`) | Genuine mixed grammar | Often mis-segmented | Meaning distorted | Documented in failure analysis; a good report example |
@@ -2469,7 +2583,7 @@ Idiom lexicon: our compilation from published literature, with per-row citations
 |---|---|---|---|
 | **0:00–0:20** | **The number** | Title card: *"In the largest published Kenyan primary-care study, 5.3 million consultations, fewer than 2 depression cases were detected per 100,000. No Kenyan MOH form has a field for maternal mental health."* | The problem is quantified and correctly scoped. ⚠️ **The earlier version of this card generalised a single county's finding to "Kenya" and set it against a prevalence rate with a different denominator. §3.3a explains why both were wrong; this card is the fixed version and the wording is load-bearing.** |
 | 0:20–0:35 | Consent | S3, script visible, Grace taps `Amekubali` | Ethics is a screen, not a paragraph. Audio-deletion promise is made out loud here so the S8 payoff lands. |
-| **0:35–1:05** | **The utterance** | S4-recording. Amina speaks: *"Kichwa inauma kila siku, nikaenda hospitali wakanipa* **painkillers** *. Lakini* **sifeel poa** *... usiku sina usingizi, nakuwa na* **mawazo mengi** *sana."* | **Three switch points, Sheng, and a documented idiom in one natural utterance.** This is the whole competition in nine seconds. |
+| **0:35–1:05** | **The utterance** | S4-recording. Amina speaks: *"Kichwa inauma kila siku, nikaenda hospitali wakanipa* **painkillers** *. Lakini bado niko na* **stress** *sana... usiku sina usingizi, nakuwa na* **mawazo mengi** *."* | **Four switch points and a documented Kiswahili idiom in one natural sentence.** Note that *stress* is not decoration: Mendenhall 2019 documents the English words "stress" and "depression" as adopted into Kiswahili discourse with shifted meaning, so the embedded English **is** the affective vocabulary. That is the thesis, in one sentence a judge can hear. |
 | 1:05–1:20 | Transcript with switching visible | S4-extracted, transcript expanded briefly; **English spans tinted ochre** | Sahara caught the embedded English. Visible, not asserted. |
 | **1:20–1:40** | **The refusal** | Evidence card for `mawazo mengi` populates. The somatic headline does **not** populate. A note reads *"Dalili za mwili pekee, tuulize zaidi"* ("Physical symptoms only, let's ask more") | **The system declines to over-read. Most demos show a system doing more. This one shows it doing less, correctly.** |
 | **1:40–2:00** | **The agent** | Probe card: *"Umesema unaskia* **kuchoka moyo** *. Hiyo hisia ya kuchoka, iko zaidi kwa mwili ama pia kwa mawazo?"* Grace taps `Uliza`. Amina answers. Constructs fill. | **This is the agentic proof.** The question was not scripted; it uses her exact words; it is the one question that separates somatic from psychological. |
@@ -2497,110 +2611,180 @@ Record the full run **before** it is needed. Keep a known-good session recorded 
 
 ## 24.1 The real calendar
 
-**Today is Friday 11 September 2026. The deadline is Tuesday 15 September.** Two people, five calendar days including today.
+**Two people. Target: everything submittable by the end of the second day, working through the night between them.** The plan is expressed in **elapsed hours from now (T+0)**, not in dates, because the team is compressing rather than spreading. Total window to a submittable package: **T+34**.
 
-| Day | Date | Milestones |
+**Estimates assume agent-assisted development** (Claude Code, Cursor or equivalent) for scaffolding, boilerplate, adapters, test fixtures and the benchmark harness. Without that, multiply the build milestones by roughly 2 and cut accordingly. The estimates do **not** compress for the three things agents do not speed up: native-speaker Kiswahili review, clinician review of the safety lexicon, and recording the demo.
+
+## 24.1a The two tracks and where they meet
+
+**Person A: Product.** Next.js app, UI, audio capture, agent orchestration, persistence.
+**Person B: Intelligence and Benchmark.** Sahara adapter, lexicons, extraction prompt and schema, safety layer, benchmark harness, report.
+
+The tracks run in parallel after T+2 and meet at one interface: `ASRAdapter` plus the `extraction` JSON schema. **Agree both inside the first hour and freeze them at T+6.** Changing either after that costs more than whatever it buys.
+
+| Window | Person A (product) | Person B (intelligence + benchmark) |
 |---|---|---|
-| **Fri** | 11 Sep | M0 Unblock · M1 Foundation |
-| **Sat** | 12 Sep | M2 Core voice · M3 Code-switch · M4 Agentic. **MVP functionally complete by Saturday evening.** |
-| **Sun** | 13 Sep | M5 UI/UX polish · M6 Benchmark run |
-| **Mon** | 14 Sep | M7 Testing · M8 demo recording and documentation. **Submit if the mechanism allows.** |
-| **Tue** | 15 Sep | Buffer, then submit. **Do not plan to build on Tuesday.** |
+| **T+0 → T+2** | M0 Unblock, together | M0 Unblock, together |
+| **T+2 → T+7** | M1 app shell, capture, S1/S2/S3 | M1 Sahara adapter, both lexicons |
+| **T+7 → T+13** | M2 S4 turn loop, evidence cards | M2 extraction schema, span validation, somatic rule + backstop |
+| **T+13 → T+17** | M3 span tinting, deletion strip | M3 LID, `cps`, deletion detector |
+| **T+17 → T+24** | M4 coverage state, decision function, S5 escalation | M4 probe generation, deterministic scoring and routing |
+| **T+13 → T+29** | n/a | **M6 benchmark, interleaved. Long-running jobs start early and run unattended.** |
+| **T+24 → T+29** | M5 S6/S7/S8/S9, design system, microcopy | M6 continues; report generation |
+| **T+29 → T+32** | M7 acceptance testing, together | M7 acceptance testing, together |
+| **T+32 → T+34** | M8 demo, docs, submit | M8 benchmark report, field set packaging |
 
-⚠️ **Anchor all planning to dates, never to weekday names.** No submission time-of-day or timezone is published, so treat Tuesday's deadline as Monday's.
+**T+24 is the hard gate. The MVP is functionally complete there or the cut list in §24.11 gets deeper, not the schedule longer.**
 
-**Person A: Product.** Next.js app, UI, audio, agent orchestration, persistence.
-**Person B: Intelligence + Benchmark.** Sahara adapter, lexicons, extraction prompt and schema, safety layer, benchmark harness, report.
+⚠️ **Two risk notes on the overnight plan, offered as engineering rather than advice.** First, **start the benchmark's long jobs before the tired hours**, because a run that fails at T+26 costs two hours you will not have. Second, four items should not be executed at hour 30 of a push: the **safety lexicon** (§11.4a), the **item-9 probe wording** (§11.6a), the **acceptance tests in §26.11**, and the **final read of every Kiswahili string**. Those are the four places where a mistake is not recoverable by a later commit. Front-load them, or schedule the sleep block before them.
 
-They meet at one interface: `ASRAdapter` plus the `extraction` JSON schema. **Agree both in the first hour and do not change them after Friday noon.**
+⚠️ **Fire the external dependencies at T+0, because they run on other people's clocks.** Gated Hugging Face approval, a native Kenyan Kiswahili reviewer, and a clinician for the safety lexicon are all blocking, all unaffected by how fast the team works, and all free to request now.
 
-## 24.2 Milestone 0: Unblock (11 Sep, today, budget 3 hours, both)
+## 24.1b The two contracts, and what "contract" means here
 
-**Goal.** Remove every dependency that could block Friday.
+A **contract** is a written agreement on the shape of data crossing between the two tracks. It is not a design document and not code. It exists so that A and B can build against each other for twenty hours without either one blocking on the other, and so that neither discovers at T+20 that the other returns a different shape than expected.
+
+**Why two people need this and one person would not.** With a single developer, the interface lives in their head and refactoring is cheap. With two people on parallel tracks and no time for integration debugging, an unwritten interface fails in the worst possible way: both halves work, neither half works together, and the discovery happens with hours left. Writing these down costs twenty minutes. Not writing them down is the most likely cause of a failed integration on this schedule.
+
+**Write both into `docs/contracts.md`, commit it, and freeze at T+6.** After T+6 a change requires both people to agree and both to update their side in the same sitting.
+
+### Contract 1: `ASRAdapter` (the boundary between the product and any speech model)
+
+Everything about which ASR model is in use sits behind this one function signature (§17.5).
+
+```ts
+interface ASRAdapter {
+  name: string;                       // "sahara-v2.5-corr-off", "whisper-large-v3-sw", ...
+  transcribe(audio: Blob | Buffer, opts: { lang: string }): Promise<{
+    text: string;                     // the transcript, verbatim, no post-processing by us
+    latencyMs: number;                // measured at this boundary, for §14.1 and the benchmark
+    meta: Record<string, unknown>;    // model-specific extras; never read by product logic
+  }>;
+}
+```
+
+**What the contract must additionally state in writing**, because these are the parts that bite:
+- **Errors throw typed errors, they do not return empty strings.** An empty `text` means "she said nothing", and a failed call means "we do not know what she said". Conflating those two is how a screening record silently loses a turn.
+- **The adapter never retries.** Retry policy, backoff and `Retry-After` handling live in the caller, so the benchmark can measure raw latency and the product can retry on its own terms.
+- **`text` is returned unmodified.** No trimming, no normalisation, no casing changes. Normalisation is the benchmark's job (§18.7) and the safety scan must see raw text (§11.4a rule 2).
+- **Who owns which implementation:** B writes `SaharaAdapter` plus the benchmark-only adapters; A consumes the interface and never imports a concrete adapter directly.
+
+**What this buys.** Swapping the product's ASR is a one-line config change. That is also what makes the benchmark honest rather than decorative: the thing being benchmarked is literally the thing the product calls.
+
+### Contract 2: the `extraction` JSON schema (the boundary between the transcript and the clinical record)
+
+The exact object B's extraction step returns and A's UI renders. **The authoritative shape is §11.3** and the contract file should reference it rather than restating it, so there is one source of truth.
+
+**What the contract must state in writing:**
+- **Every field is required. There are no optional clinical fields.** A missing field is a schema violation, not a default.
+- **`evidence_span` must be a literal substring of the turn transcript**, and the validator that enforces it (FR-11) belongs to B and runs before A ever sees the object.
+- **Enumerations are fixed and named:** `construct` values, `severity_estimate` as an integer 0 to 3, `confidence` as a float 0 to 1, `span_language` as one of `sw | en | sheng | unknown`.
+- **`risk_flag` is top-level, not an item.** A's escalation logic reads only that field and the deterministic scan's output, never an item's contents.
+- **Denial and absence are different states.** A construct the mother explicitly denied goes in `constructs_addressed_but_negative`; a construct never reached is simply absent. A's coverage strip renders these differently, so the distinction must survive the boundary.
+- **B ships a hand-written example object and a deliberately invalid one on day one.** A builds the UI against those two fixtures and does not wait for the model to work. This is the single highest-value item in the contract, because it decouples the two tracks completely for the first six hours.
+
+### A third thing worth agreeing at T+0, though it is not an interface
+
+**The `data/` files are contracts with the clinicians, not with each other:** `idiom_lexicon.csv`, `safety_lexicon.csv`, `probes/phq9_item9.sw.txt`. They are data, not code, specifically so a clinician or a native speaker can review them without reading TypeScript (§14.8). **Agree their column headers at T+0**, because renaming a column at T+20 breaks both tracks at once.
+
+## 24.2 Milestone 0: Unblock (T+0 → T+2, both, 2 h)
+
+**Goal.** Start every clock that is not the team's own, and prove every external dependency actually works before writing code against it.
+
+**Already resolved, no action needed:**
+- ✅ **Sahara API key in hand.**
+- ✅ **Hugging Face access granted to `intronhealth/AfriSwitchCare` and `intronhealth/AfriSwitch`.** This was the single highest-risk item in an earlier draft of this plan and it is now closed. **Consequence: the deletion-detector `FLOOR` can be derived from real AfriSwitchCare gold transcripts as originally specified (§11.5), and the field-set fallback in §24.11 is no longer needed.**
 
 **Tasks, in priority order:**
-1. ⚠️ **Request Hugging Face access to `intronhealth/AfriSwitchCare` and `intronhealth/AfriSwitch` NOW.** Both are gated. **Approval latency is unknown and it gates the entire benchmark. This is the highest-risk item on the board and it costs five minutes.**
-2. ⚠️ **Verify the Sahara API key works and check the credit balance.** The streaming API returns `credit_balance` in `SESSION_CREATED`; the file API will surface `QUOTA_EXCEEDED`. **The participant allowance is not published.** Estimate burn: dataset A is 1.54 h, dataset B is 3.89 h, plus development turns. If credits are tight, prioritise A over B.
-3. Email **voice@intron.io** to confirm the submission mechanism and the 15 Sep deadline timezone (no time of day is published).
-4. Repo, `.env.example`, deploy an empty Next.js app to Vercel **today** so deployment is never a last-day surprise.
-5. Provision Postgres, apply the 6-table schema.
-6. **Agree the `ASRAdapter` interface and the extraction JSON schema in writing.**
 
-**Definition of done.** Dataset access requested; a Sahara call returns a transcript from a real WAV; a blank app is live at a public URL; both contracts are written down.
-**Risk.** Dataset approval does not arrive. **Mitigation:** field set C plus AfriSwitch's published statistics become the fallback, and the report says so.
+1. **Prove the key and the datasets, do not assume them.** One real transcription call returning text from a WAV, and one `load_dataset("intronhealth/AfriSwitchCare", "swahili", split="test")` that actually materialises rows. ⚠️ **Confirm the config name is `"swahili"`** while doing it; §18.5 flags that it was inferred from the card's `"hausa"` example.
+2. ⚠️ **Check the Sahara credit balance and estimate burn before building.** The streaming API returns `credit_balance` in `SESSION_CREATED`; the file API surfaces `QUOTA_EXCEEDED`. **The participant allowance is published nowhere.** Dataset A is 1.54 h, plus development turns, plus benchmark re-runs. **This is now the highest-risk external unknown on the board**, and running out at T+25 is the one failure this milestone exists to prevent.
+3. **Ask a native Kenyan Kiswahili speaker** whether they can review roughly 60 short strings later in the build. A hard Definition-of-Done item (§25.5), and it cannot be compressed.
+4. **Ask a Kenyan mental health clinician** to review the safety lexicon (§11.4a) and the item-9 probe wording (§11.6a). If nobody is reachable, that goes in `LIMITATIONS.md` rather than being quietly skipped.
+5. Ask Intron how to submit and the deadline timezone, via **both** voice@intron.io (the API support address, per §2.1) **and** the [intron.io/contact](https://www.intron.io/contact/) form.
+6. Repo, `.env.example`, deploy an empty Next.js app to a public URL **in this milestone**, so deployment is never discovered to be broken at T+33.
+7. Provision Postgres, apply the 6-table schema.
+8. **Agree the two contracts in writing (§24.1b).**
 
-## 24.3 Milestone 1: Foundation (11 Sep, evening)
+**Definition of done.** A Sahara call returns a transcript from a real WAV; the Swahili dataset config loads and its row count matches the card; credit balance known and burn estimated; both human reviewers asked; a blank app is live at a public URL; both contracts committed to `docs/contracts.md`.
+**Risk.** Credits are tighter than the benchmark needs. **Mitigation:** dataset A only (B is already cut, §24.11), and reduce the benchmark to three model configurations before reducing anything in the product.
+
+## 24.3 Milestone 1: Foundation (T+2 → T+7, 5 h)
 
 **A:** app shell, routing, S1/S2/S3, `MediaRecorder` capture with the amplitude meter, `localStorage` for the CHP code.
 **B:** `SaharaAdapter` working end to end on a file; `data/idiom_lexicon.csv` (15 entries, §5.4, with citations); `data/safety_lexicon.csv` including hedged forms.
 **DoD.** Record in the browser → server → Sahara → transcript on screen. Consent gate enforced **server-side**. Both lexicons committed as CSV.
 **Risk.** WebM/Opus rejected. **Mitigation:** Sahara accepts WebM per the docs; if it fails, a server-side ffmpeg transcode to WAV is a 30-minute fallback.
 
-## 24.4 Milestone 2: Core voice interaction (12 Sep, morning)
+## 24.4 Milestone 2: Core voice interaction (T+7 → T+13, 6 h)
 
 **A:** S4 in all four states; turn loop; evidence card component; transcript collapsed; 100 s/110 s limits; error states from §21.1 and §21.2.
-**B:** extraction prompt with strict JSON schema; **span validation**; the somatic-only rule; confidence banding.
+**B:** extraction prompt with strict JSON schema; **span validation**; the somatic-only rule **and its deterministic backstop (§11.4b)**; confidence banding; **the output denylist (FR-24a)**.
 **DoD.** One turn produces validated evidence cards with verbatim quotes. **Adversarial fixture: a hallucinated span is dropped and logged.**
 **Risk.** Schema instability. **Mitigation:** `temperature = 0`, enforce in code, one retry, then manual path.
 
-## 24.5 Milestone 3: Code-switch processing (12 Sep, midday)
+## 24.5 Milestone 3: Code-switch processing (T+13 → T+17, 4 h)
 
 **B:** token LID; CMI; `cps`; **deletion-signature detector with `FLOOR` derived from AfriSwitchCare gold transcripts, not guessed**; fuzzy idiom matching with stem variants.
 **A:** ochre tinting of English spans in the transcript; the amber deletion strip.
 **DoD.** A code-switched utterance shows tinted English spans; a truncated transcript raises the amber strip; an idiom match produces a chip with its `idiom_id`.
-**Risk.** LID accuracy is poor. **Mitigation:** heuristic lexicon plus character n-grams is sufficient for tinting and `cps`. **Do not spend a day on a proper LID model.**
+**Risk.** LID accuracy is poor. **Mitigation:** heuristic lexicon plus character n-grams is sufficient for tinting and `cps`. **Cap this at 90 minutes; a proper LID model is not in scope** (§24.11).
 
-## 24.6 Milestone 4: Agentic workflow (12 Sep, afternoon). **MVP functionally complete at the end of this milestone.**
+## 24.6 Milestone 4: Agentic workflow (T+17 → T+24, 7 h). **The MVP is functionally complete at T+24 or the cut list gets deeper.**
 
-**A:** coverage state; the decision function; probe card; `MAX_TURNS`; S5 escalation with bundled crisis contacts; the manual risk-flag button.
-**B:** probe generation with the register-mirroring constraints; **deterministic `score()` and `route_referral()` with unit tests against hand-computed vectors**.
-**DoD.** A multi-turn session runs to `COMPLETE`. A safety phrase triggers S5 in ≤500 ms. **The agent always probes PHQ-9 #9 at least once.** Scoring is unit-tested.
+**A:** coverage state; the decision function **including the item-9 gate (§11.6)**; probe card; `MAX_TURNS`; S5 escalation with bundled crisis contacts, hours, costs and the privacy check; the manual risk-flag button.
+**B:** probe generation with the register-mirroring constraints; **the fixed item-9 probe file (§11.6a)**; **deterministic `score()`, the band table and `route_referral()` with unit tests against hand-computed vectors and at every band boundary**.
+**DoD.** A multi-turn session runs to `COMPLETE`. A safety phrase triggers S5 inside the §14.1 budget. **Unit test asserts no path through `decide()` returns `COMPLETE` while PHQ-9 #9 is `UNCOVERED`.** Scoring and banding are unit-tested. The escalation tier is latched and cannot be lowered by an edit.
 **Risk.** The loop misbehaves live. **Mitigation:** the state machine is explicit and logged; `Maliza` (finish) is always available.
 
-## 24.7 Milestone 5: UI/UX polish (13 Sep, full day, A leads)
+## 24.7 Milestone 5: UI/UX polish (T+24 → T+29, 5 h, A leads)
 
 **A:** S6, S7, S8, S9; back-read generation; English handover; disclaimers on S1/S7/S8; the full colour and type system; all microcopy; 360×640 verification on a real Android; `prefers-reduced-motion`.
-**B:** S10 wired to real benchmark output; the audio purge path with its audit event.
+**B:** S10 as a static table rendered from the committed results CSV (per §24.11); the audio purge path with its audit event.
 **DoD.** A complete session runs from S1 to S8 on a real Android. Audio is verifiably deleted. **⚠️ Native Kiswahili review of every string is complete.**
-**Risk.** Polish expands without limit. **Mitigation:** hard stop Saturday evening. Anything unfinished moves to §24.11, not to the next day.
+**Risk.** Polish expands without limit, which is the classic way a 5-hour milestone becomes 12. **Mitigation:** this milestone has a hard 5-hour box. At T+29 whatever is unfinished moves to §24.11, not into M7's window. **Product Quality is the binding constraint on the whole submission (§28), so protect this box rather than extending it.**
 
-## 24.8 Milestone 6: Benchmarking (12 Sep evening through 13 Sep, B leads)
+## 24.8 Milestone 6: Benchmarking (T+13 → T+29 on B's track, interleaved, ~8 h of attended work)
 
-**B:** VAD chunking, computed once and committed; four adapters; Tier 1, 2 and 3 metrics; the Sahara corrections-on/off split; a stratified 100-utterance failure analysis; report generation; raw per-sample CSVs.
-**DoD.** `python -m bench.run --models all` completes. All three tables populate. **Band-flip rate is computed.** Results render on S10.
-**Risk.** Dataset access still missing, or credits exhausted. **Mitigation:** run dataset A first (it is the in-domain one and the smaller one at 1.54 h). B is nice to have. C is fully under our control and can be recorded Saturday.
+**This milestone is deliberately not a block.** It is a set of long-running jobs that B starts early and babysits between other tasks, because a benchmark run is mostly waiting and Sahara's sync endpoint is rate-limited to 30 requests per minute. **Start the first real run no later than T+17.**
 
-## 24.9 Milestone 7: Testing (14 Sep, morning)
+**B:** VAD chunking, computed once and committed; adapters for Sahara (both configurations), Whisper (both conditions) and Jacaranda; Tier 1 and Tier 2 metrics on dataset A; **Tier 2 SPR and all of Tier 3 on field set C** (§18.5a); a 20-utterance failure analysis across two configurations (§24.11); report generation; raw per-sample CSVs.
+**Also in this window:** record field set C, 28 clips (§18.6). **The 4 held-out safety clips must be written by whichever team member did not author the safety lexicon**, so schedule that handoff rather than discovering it at the end.
+**DoD.** `python -m bench.run --models all` completes from a clean clone. Tables 1, 2 and 4 populate. **Band-flip is computed on field set C, not on dataset A.** Results committed as CSV and rendered on S10.
+**Risk.** Credits exhausted mid-run. **Mitigation:** run dataset A first (in-domain and the smaller at 1.54 h); dataset B is already cut (§24.11); field set C is entirely under the team's control. **If credits run short, drop model configurations before dropping datasets**, because three configurations on two datasets is a more defensible submission than five on one.
+
+## 24.9 Milestone 7: Testing (T+29 → T+32, 3 h, both)
 
 Both: run every §26 acceptance scenario against the deployed URL; verify all §25 Definition of Done boxes; a timed dry run with **someone not on the team**; dependency audit; **assert no log line contains PHI**; confirm no third-party scripts.
 **DoD.** All P0 scenarios pass. Every unchecked DoD box is either fixed or explicitly listed as a known limitation in the README.
 
-## 24.10 Milestone 8: Submission (14 Sep afternoon, submit; 15 Sep buffer)
+## 24.10 Milestone 8: Submission (T+32 → T+34, 2 h, both)
 
-**14 Sep, afternoon and evening:** record the demo (multiple takes, keep a known-good full run); write `README.md`, `BENCHMARK.md`, `RESPONSIBLE-AI.md`, `LIMITATIONS.md`; package field set C audio and metadata CSV; release `idiom_lexicon.csv` under CC BY 4.0; final read-through of this spec against §28. **Then submit.**
-**15 Sep:** buffer only. **Do not plan to build, and do not plan to submit for the first time, on the 15th.**
+Record the demo (multiple takes, and **keep a known-good full run as a backup before attempting a better one**); write `README.md`, `BENCHMARK.md`, `RESPONSIBLE-AI.md`, `LIMITATIONS.md`; package field set C audio and metadata CSV; release `idiom_lexicon.csv` under CC BY 4.0; final read-through of this specification against §28. **Then submit.**
 
-**⚠️ Submit on 14 September.** No deadline time-of-day or timezone is published, and a deadline in an unknown timezone has already passed somewhere. If the submission mechanism allows resubmission, submit a complete-but-imperfect package on the 14th and replace it on the 15th.
+**⚠️ Submit as soon as the package is complete, and do not hold it for polish.** No deadline time-of-day or timezone is published (§2.1), so a deadline in an unknown timezone has already passed somewhere. If the submission mechanism allows resubmission, submit a complete-but-imperfect package the moment one exists and replace it afterwards. **Every hour a finished package sits unsubmitted is pure downside risk.**
+
+⚠️ **Check the Sahara credit balance immediately before recording the demo.** Running out mid-take is a recoverable annoyance if a known-good run is already saved and an unrecoverable one if it is not.
 
 ## 24.11 Cut list, pre-agreed
 
-**Cut these now, before starting, not "if we fall behind".** A review of the Must-Have list against the calendar found it roughly three times oversized. Cutting on Saturday night under pressure produces worse choices than cutting on Friday morning with a clear head.
+**Cut these at T+0, before starting, not "if we fall behind".** A review of the Must-Have list against the available hours found it roughly three times oversized. **Cutting at hour 28 under pressure produces worse choices than cutting at hour zero with a clear head**, and on a compressed overnight schedule the decision quality gap is the whole argument.
 
 | Cut | Instead | Why now |
 |---|---|---|
 | **Dataset B from the benchmark** | Datasets A and C only | 650 utterances × 6 configs is ~3,900 ASR calls; at Sahara's 30 req/min sync limit that is over two hours of wall clock **per Sahara config alone**, before Whisper or anything else. It is the robustness set, not the primary one. |
 | **Tier 3 metrics on dataset A** | Field set C only | Not a time cut, a correctness cut: §18.5a shows band-flip on A is degenerate by construction. Doing less here is doing it right. |
-| **The 5th model (MMS) and ElevenLabs** | Sahara ×2 + Whisper ×2 + Jacaranda | Three vendors, five configurations. Satisfies the narrower reading; add ElevenLabs back on Sunday only if the harness is done. |
-| **Failure analysis at 100 utterances × 11 categories × 5 models** | **20 utterances, 2 configurations** (Sahara corr-OFF vs Whisper-auto), one table | A full day of human labour assigned to the person still building the harness. The qualitative finding is identical at 20. |
+| **The 5th model (MMS) and ElevenLabs** | Sahara ×2 + Whisper ×2 + Jacaranda | Three vendors, five configurations. Satisfies the narrower reading of the requirement; add ElevenLabs back only if the harness is finished and idle before T+29. |
+| **Failure analysis at 100 utterances × 11 categories × 5 models** | **20 utterances, 2 configurations** (Sahara corr-OFF vs Whisper-auto), one table | Several hours of unavoidably manual labour, assigned to the person still building the harness. The qualitative finding is identical at 20. |
 | **CMI computed per turn in the product (FR-08)** | Keep a wordlist good enough to tint English spans ochre; compute CMI once, in the harness, on gold text | A heuristic LID yields CMI with unknown error, which makes CMI-Δ meaningless anyway. The only thing the product needs LID for is the demo beat at 1:05. |
-| **S10 wired to live benchmark output (M16)** | A static table rendered from a committed CSV | A judge cannot tell the difference, and wiring costs Sunday hours. |
+| **S10 wired to live benchmark output (M16)** | A static table rendered from a committed CSV | A judge cannot tell the difference, and the wiring competes directly with M5's polish box. |
 | **M14's "list past screens for a mother"** | Persist only; no history screen | Adds a screen, a query and an empty state for something the demo never opens. |
 | **FR-22's "at her measured proportions"** | Reproduce her verbatim quotes inside a Kiswahili frame | Hitting a target token ratio is an open generation-control problem, and it is not what the trust requirement in §4.2 asks for. Her own words back is. |
-| **Automated PHI-in-logs and bundle-inspection CI tests (FR-40, §25.6)** | Keep the discipline; verify by manual grep on 14 Sep | The check matters, the automation does not, this week. |
+| **Automated PHI-in-logs and bundle-inspection CI tests (FR-40, §25.6)** | Keep the discipline; verify by manual grep during M7 | The check matters, the automation does not, on this timescale. |
 
 **If still behind after all of the above, cut in this order:** S11 mother history → offline queueing (SH4) → session pause/resume (SH5) → inline single-item re-record (SH2).
 
-⚠️ **The deletion-signature detector (FR-32) has an external dependency.** Its `FLOOR` is derived from gated dataset A. If access has not arrived by Saturday midday, **derive the floor from field set C's 28 clips instead and state that substitution in `LIMITATIONS.md`.** Do not let a gated download kill the feature that connects the benchmark to the product.
+✅ **The deletion-signature detector's external dependency is resolved.** Dataset access is granted (§24.2), so the `FLOOR` is derived from real AfriSwitchCare gold transcripts as §11.5 specifies. **Derive it, record the derived value in the repo, and do not hardcode a guess.**
 
 **Never cut:** the safety layer, **the fixed item-9 probe (§11.6a)**, **the item-9 gate in `decide()`**, span validation, the somatic-only rule **and its deterministic backstop (§11.4b)**, the output denylist (FR-24a), consent enforcement, audio deletion, the disclaimers, or the deterministic scoring. **Those are the submission.**
 
@@ -2636,7 +2820,7 @@ The project is **not** done because the code runs, a transcript appears, the UI 
 - [ ] Token LID, CMI and `cps` are computed per turn
 - [ ] Deletion-signature detector fires on truncated transcripts, with `FLOOR` **derived from data and recorded in the repo**
 - [ ] Idiom lexicon matches fuzzily with stem variants and records `idiom_id`
-- [ ] Sheng entries match
+- [ ] Sheng input is accepted and recorded without crashing, and is **not** claimed as a supported capability anywhere in the submission
 - [ ] Probes mirror the mother's register and never translate her idiom back at her
 - [ ] A third language is marked `unrecognised_language` and is never hallucinated into Swahili
 
@@ -2702,7 +2886,7 @@ The project is **not** done because the code runs, a transcript appears, the UI 
 
 ## 25.9 Demo Done
 - [ ] ≤3 minutes, recorded against the deployed URL on a real Android
-- [ ] Contains an utterance with ≥3 switch points including Sheng
+- [ ] Contains an utterance with ≥3 Kiswahili-English switch points and a documented idiom
 - [ ] Shows the somatic-only refusal
 - [ ] Shows an agent-generated probe using the mother's own words
 - [ ] Shows a failure and its recovery
@@ -2729,7 +2913,7 @@ The project is **not** done because the code runs, a transcript appears, the UI 
 - [ ] Field set C audio + metadata submitted (**never datasets A or B, which are CC BY-NC-SA and gated**)
 - [ ] Vertical stated as Health in the first line
 - [ ] ⚠️ Submission mechanism and deadline timezone confirmed with Intron
-- [ ] **Submitted on 14 September, a day before the deadline**
+- [ ] **Submitted as soon as the package was complete, not held for polish** (§24.10)
 
 ---
 
@@ -2748,9 +2932,10 @@ Each scenario is **P0** (blocks submission) or **P1** (should pass). Together th
 
 ## 26.2 Code-switch path (P0)
 
-**Scenario.** Heavy intra-sentential switching including Sheng.
-**Input.** *"Nikiamka asubuhi naskia body yangu ni heavy, sina energy ya kufanya kitu. Sifeel poa kabisa."*
-**Expected.** English spans present in the transcript and visibly tinted; `language_profile` reflects the mix; CMI computed; the `sifeel poa` lexicon entry matches and produces a chip; probes are generated in her mixed register, not in monolingual Kiswahili.
+**Scenario.** Heavy intra-sentential Kiswahili-English switching.
+**Input.** *"Nikiamka asubuhi naskia body yangu ni heavy, sina energy ya kufanya kitu. Niko na stress sana."*
+**Expected.** English spans present in the transcript and visibly tinted; `language_profile` reflects the mix; CMI computed; probes are generated in her mixed register, not in monolingual Kiswahili.
+**Note.** A Sheng variant of this fixture (*"Sifeel poa kabisa"*) is recorded and observed but **not scored against a pass criterion** (§5.1).
 **Pass criteria.** **No English token is silently dropped.** Verified by manual comparison against what was spoken. `EESR = 1.00` on this fixture.
 
 ## 26.3 Noise path (P1)
@@ -2844,7 +3029,7 @@ Things a team under time pressure will be tempted to build. Each is excluded wit
 | **User accounts, passwords, RBAC** | A CHP code suffices for a 4-day demo. Real auth is pilot work and adds zero judging value. |
 | **An analytics dashboard with charts** | Judges do not score charts. It is a day of work that shows nothing the demo does not. |
 | **Multi-language expansion beyond Swahili-English** | Sahara offers 11 other code-switched pairs and it is tempting to claim breadth. Breadth without depth reads as a demo. **One language pair, done properly, beats twelve done shallowly**, and the idiom lexicon does not generalise. |
-| **Fine-tuning our own ASR model** | No public Swahili-English code-switched training corpus exists. In four days this is not a project, it is a way to lose. (It is a good *paper*: §29.5.) |
+| **Fine-tuning our own ASR model** | No public Swahili-English code-switched training corpus exists. On this timescale it is not a project, it is a way to lose. (It is a good *paper*: §29.5.) |
 | **Full offline mode** | Genuinely valuable in the field and genuinely a multi-day build with sync-conflict handling. Queueing a completed record (SH4) captures most of the value for a fraction of the cost. |
 | **PDF report generation** | The clinician reads a WhatsApp message, not a PDF. Plain text share is correct and takes an hour. |
 | **A mother-facing companion app** | Doubles the surface area, halves the polish, and reintroduces the unsupervised-disclosure safety problem. |
@@ -2868,21 +3053,21 @@ Written as a skeptical judge who has seen forty submissions and is looking for r
 | **Real-world impact** | **7** | Rides on infrastructure that exists (97.9% ANC1, ~107,000 CHPs with smartphones) rather than infrastructure it wishes existed. | **Screening without treatment capacity is the standing objection, and comparable interventions in this region achieve 0.06–0.09 SD.** | §7.5 answers it with the Feyissa meta-analysis, Friendship Bench, the Kumar 2026 Kenyan perinatal trial, and by matching the IPMH trial's exact thresholds. **The honest claim is a process outcome, not a clinical one. Say it that way and the score holds; overclaim and it drops to 5.** |
 | **African relevance** | **9** | Kenyan cadre, Kenyan statute, Kenyan idioms with Kenyan citations, Kenyan crisis lines verified individually, Kenyan legal status of attempted suicide reflected in the script. | Kenya-only. Tanzania is explicitly excluded, and correctly so. | Keep the exclusion and explain it. Scope discipline reads as judgement, not as a gap. |
 | **Voice necessity** | **9** | Hummel 2022 (depressed women send fewer SMS) is a *published* reason the incumbent channel fails, not a preference. Velloza 2020 shows the form itself is unparseable. | A judge may ask why not IVR. | §3.7 answers it with Jacaranda's own STT-stage failures and the 39%-reach IVR finding. |
-| **Code-switching relevance** | **9** | Swahili is the highest-switch-density pair in Intron's own benchmark. The affective vocabulary is the code-switched part (Owidi 2025). No competitor handles intra-sentential switching. | Sheng is out of every model's training distribution and will look bad in the results. | **Report it as a finding, prominently.** "Sheng is unserved by every model tested" is a contribution. Hiding it would be the mistake. |
-| **Product quality** | **6** | Complete screen set, real states, native-reviewed Kiswahili, real-device verification. | **This is the score most at risk from a four-day build.** It is also the one a judge assesses in the first ten seconds of the video. | Protect Milestone 5. Cut features, never polish. If something must give, cut dataset B from the benchmark before cutting UI finish. |
+| **Code-switching relevance** | **9** | Swahili is the highest-switch-density pair in Intron's own benchmark. The affective vocabulary is the code-switched part (Owidi 2025). No competitor handles intra-sentential switching. | The single language pair limits breadth, and Sheng is explicitly out of scope. | **Depth over breadth is the right call and should be stated as a choice.** Sheng is noted as observed, unscored and carried to the research track (§5.1, §29.5), which is more defensible than claiming a capability no underlying model has. |
+| **Product quality** | **6** | Complete screen set, real states, native-reviewed Kiswahili, real-device verification. | **This is the score most at risk from a compressed build.** It is also the one a judge assesses in the first ten seconds of the video. | Protect Milestone 5's 5-hour box absolutely. Cut features, never polish. If something must give, cut benchmark scope before UI finish. |
 | **UX** | **8** | The design decisions are argued from field constraints (one hand free, sunlight, a mother watching the screen) rather than from taste. The no-live-transcription decision is defensible and unusual. | Not validated with a real CHP. | **Run the timed dry run with someone outside the team (§24.9) and state in the submission that it was done.** One line of real usability evidence outperforms three of assertion. |
 | **Technical credibility** | **8** | ASRAdapter interface, deterministic model-free scoring, hard substring validation, the Sahara corrections-on/off split, documented normalisation deviations and a documented bug in the reference harness. | Not distributed, not scaled, single-region, no auth. | §14.3 states the non-goals explicitly. **A judge respects a stated non-goal far more than a missing one.** |
 | **Agentic behaviour** | **7** | Genuine state, a real three-way decision, generated rather than scripted probes, and a probe that is clinically meaningful. | **Six turns is a short loop, and a skeptical judge may call it a decision tree with an LLM attached.** | The defence is the *probe generation*: it is unscripted, register-mirroring, and targets a construct chosen by state. **Show it happening in the demo (beat 1:40) rather than describing it.** |
 | **Benchmark quality** | **9** | Four models plus a fifth configuration; three metric tiers; **EESR and band-flip are net-new and measure something aggregate WER structurally cannot see**; exclusions are documented on ToS grounds; baselines are anchored to shamiriAI's 0.34, not to the flattering monolingual 0.068. | **Small n: 12 conversations in the primary set.** | State n prominently and do not compute confidence intervals on 12 conversations as if they were 1,200. Add dataset B if credits allow. **The honesty is itself the strength.** |
 | **Responsible AI** | **9** | Consent enforced server-side; audio deleted by default; a deterministic model-free safety layer; SPR release gate; ToS-based vendor exclusions; **individually verified crisis lines including catching a dead domain that appears on aggregator lists**; no diagnosis, on legal grounds cited to statute. | **Accent bias cannot be measured, because neither Intron dataset carries speaker demographics.** | **State it as a confirmed absence in the data, not as an oversight in the method.** That distinction is the difference between a limitation and a flaw. |
 | **Demo strength** | **8** | A story with a refusal beat, a recovery beat and a safety beat; ends on the record rather than the transcript. | Depends on a live API on the day. | Record early. Keep a known-good take. Check credits before every session. |
-| **Feasibility** | **6** | Scope is cut to a real four-day calendar with a pre-agreed cut list and two named owners. | **Four days for two people is genuinely tight, and Milestone 0 has an external dependency (gated dataset approval) with unknown latency.** | **Request dataset access in the next hour.** It is the single highest-risk item and it costs five minutes. |
+| **Feasibility** | **6** | Scope is cut to the real available hours, with a pre-agreed cut list and two named owners on parallel tracks. **The API key and both gated datasets are already in hand, which removes the biggest external unknown an earlier draft carried.** | **Roughly 34 hours for two people is still very tight. Two risks remain: the Sahara credit allowance is unpublished and could halt the benchmark mid-run; and two Definition-of-Done items depend on other humans (Kiswahili review, clinician review of the safety lexicon) who have not yet agreed.** | Check credits and estimate burn in the first hour. Ask both reviewers before writing code. Front-load the four items §24.1a names as not-at-hour-30. Take the §24.11 cuts at T+0 rather than under pressure. |
 
 **Weighted impression: strong contender, with two specific ways to lose.**
 
 **Loss mode 1: the product looks like a research demo.** Everything else is strong enough that Product Quality becomes the binding constraint. Protect Milestone 5 absolutely.
 
-**Loss mode 2: the benchmark does not run because dataset access or API credits did not arrive.** Both are external, both are checkable today, and both would be unforgivable to discover on Saturday.
+**Loss mode 2: the benchmark stalls because Sahara credits run out mid-run.** Dataset access is resolved; the credit allowance is not, and it is published nowhere. Checkable inside the first hour, and unforgivable to discover at T+25.
 
 **The single highest-leverage improvement available:** get one real Kenyan CHP or perinatal nurse to use it for ten minutes and put one sentence of their feedback in the submission. Every other team will have zero user contact. One quote moves Real-world Impact and Product Quality together, and it costs an afternoon of phone calls.
 
@@ -2898,8 +3083,8 @@ Written as a skeptical judge who has seen forty submissions and is looking for r
 | **One-line description** | A Community Health Promoter's voice-first screening assistant that turns a code-switched conversation with a new mother into an evidence-linked PHQ-9 / GAD-7 record and a routed referral. |
 | **Target user** | Kenyan Community Health Promoters conducting postnatal household visits. Beneficiary: postpartum mothers. Operational user: the link-facility clinical officer. |
 | **Core problem** | In the largest published Kenyan primary-care sample, depression was detected in fewer than 2 per 100,000 consultations, and no Kenyan MOH form carries a maternal mental health field. Nobody asks; the translated instruments are unparseable by the respondent; and the distress that is voluntarily expressed is somatic and code-switched, so it is heard as a physical complaint. |
-| **Core voice interaction** | Tap-to-record turns during a household visit. The mother speaks freely in Kiswahili, English and Sheng. No language selection exists anywhere in the product. |
-| **Core code-switching scenario** | *"Kichwa inauma kila siku, nikaenda hospitali wakanipa **painkillers**. Lakini **sifeel poa**... usiku sina usingizi, nakuwa na **mawazo mengi** sana."* Three switch points, Sheng, and a documented Kiswahili idiom in one natural sentence. |
+| **Core voice interaction** | Tap-to-record turns during a household visit. The mother speaks freely in her own mix of Kiswahili and English. No language selection exists anywhere in the product. |
+| **Core code-switching scenario** | *"Kichwa inauma kila siku, nikaenda hospitali wakanipa **painkillers**. Lakini bado niko na **stress** sana... usiku sina usingizi, nakuwa na **mawazo mengi**."* Four switch points and a documented Kiswahili idiom in one natural sentence, with the affective vocabulary carried by the embedded English. |
 | **Core agentic action** | Per turn: deterministic safety scan → idiom-aware construct extraction with mandatory verbatim evidence → coverage state update → a three-way decision (PROBE / ESCALATE / COMPLETE) → on completion, deterministic scoring, banding and referral routing, then persistence and audio deletion. |
 | **Primary user journey** | S1 Home → S2 Mother → S3 Consent → S4 Conversation loop (→ S5 Escalation) → S6 Review & back-read → S7 Result → S8 English handover. |
 | **MVP features** | M1–M18 (§8.2). |
@@ -2931,7 +3116,7 @@ The fourteen-point check the process mandates, verified against the current vers
 | The technical architecture supports the product | ✅ The ASRAdapter makes the benchmark's models swappable into the product; the safety layer is local and deterministic so it cannot fail with the network; scoring is model-free so it is defensible. |
 | The benchmark measures the product's actual requirements | ✅ **EESR-clinical measures the exact failure that would break this product; band-flip measures whether ASR choice changes the clinical decision; SPR is a release gate. The deletion-signature detector is the benchmark finding wired into the product.** |
 | Responsible AI controls match the risk | ✅ Highest control density sits on the highest-severity risk (missed self-harm): four independent layers, one of which is a human in the room by design. |
-| The MVP is feasible | ⚠️ **Tight.** Four days, two people, with one external dependency (dataset gating) unresolved. §24.11 pre-agrees the cut list so cutting is a decision already made rather than a panic on Saturday. |
+| The MVP is feasible | ⚠️ **Tight but improved.** Roughly 34 elapsed hours, two people on parallel tracks. The API key and both datasets are in hand; the unpublished credit allowance and two unconfirmed human reviewers remain. §24.11 pre-agrees the cut list so cutting is a decision already made rather than a judgement call at hour 28. |
 | The demo proves the strongest aspects | ✅ Beats map to the five judging dimensions (§23.4). |
 | The Definition of Done maps to competition requirements | ✅ §25.11 mirrors Intron's five submission items; §25.3 and §25.7 map to the code-switching and benchmarking requirements; §25.8 to Ethics & Safety. |
 
@@ -2945,8 +3130,8 @@ Every assumption in one place, so any of them can be overturned cheaply.
 |---|---|---|
 | A1 | Judging dimensions are roughly equally weighted | Re-balance effort. No weights are published (§2.1). |
 | A2 | "Sahara + 3 others" is the safe reading of the model count | We benchmark 4 and satisfy both readings anyway. |
-| A3 | Dataset configs are named `"swahili"` | Confirm on access. Inferred from AfriSwitch's `"hausa"` example. |
-| A4 | Participant Sahara credits cover ~6 h of audio plus development | **Check today.** Not published anywhere. Prioritise dataset A if tight. |
+| A3 | Dataset configs are named `"swahili"` | Access is granted, so confirm in Milestone 0 by loading it. Inferred from AfriSwitch's `"hausa"` example. |
+| A4 | Sahara credits cover dataset A plus development plus benchmark re-runs | **Check in Milestone 0.** The allowance is published nowhere, and this is now the largest external unknown. Drop model configurations before datasets if tight. |
 | A5 | CHPs will accept a phone in a screening conversation | Untested. The dry run with a non-team participant is the cheapest available evidence. |
 | A6 | Mothers will speak freely with a phone recording | ⚠️ Genuinely uncertain and it is the product's biggest behavioural risk. Mitigated by consent design and by the CHP's existing relationship, not eliminated. |
 | A7 | The 15-entry idiom lexicon covers enough of the register | Thin by construction; the Swahili literature is thin (§5.5). Expanding it is the first pilot task. |
@@ -2958,12 +3143,12 @@ Every assumption in one place, so any of them can be overturned cheaply.
 
 ## 29.4 Immediate actions, in order, starting now
 
-1. **Request Hugging Face access to `intronhealth/AfriSwitchCare` and `intronhealth/AfriSwitch`.** Five minutes. Highest-risk blocker on the board.
-2. **Test the Sahara key and check the credit balance.**
-3. **Email voice@intron.io** re: submission mechanism and deadline timezone.
+1. ✅ **Done: Sahara API key and Hugging Face dataset access are both in hand.** Prove both work with one real call and one real `load_dataset`, then move on.
+2. **Check the Sahara credit balance and estimate burn.** This is now the highest-risk external unknown, since the allowance is published nowhere.
+3. **Ask Intron how to submit**, the deadline timezone, and the credit allowance, via voice@intron.io and the intron.io/contact form. Neither is a competition-specific channel; §2.1 explains why both are needed.
 4. Deploy an empty app to a public URL today.
-5. **Write down the `ASRAdapter` interface and the extraction JSON schema, and freeze both by Friday noon.**
-6. Line up a native Kenyan Kiswahili reviewer and, if at all possible, one CHP or perinatal nurse for ten minutes on Saturday.
+5. **Write down the two interface contracts (§24.1b) and freeze both at T+6.**
+6. **Line up the three people the build depends on:** a native Kenyan Kiswahili reviewer (hard DoD item), a Kenyan mental health clinician for the safety lexicon and item-9 probe, and, if at all possible, one CHP or perinatal nurse for ten minutes of real usability feedback. **All three run on their clocks, not the team's, so ask before writing any code.**
 
 ## 29.5 Post-challenge research track
 
@@ -2975,7 +3160,11 @@ This work is intended to become a paper. The shape it should take is below, beca
 
 2. **Downstream decision sensitivity: band-flip rate as an evaluation paradigm.** Reporting that model choice changes the assigned clinical severity band on X% of cases is a far more actionable claim than a WER delta. Note that Intron's own repo README lists inconsistent code-switch annotation as a limitation, so this is genuinely open territory.
 
-3. **A Swahili perinatal distress idiom lexicon with construct mappings, released openly.** Currently 15 entries. **The model to follow is the Sierra Leone Perinatal Psychological Distress Scale** (Ager et al. 2025, [doi:10.3389/fpsyt.2025.1419448](https://doi.org/10.3389/fpsyt.2025.1419448)), built from perinatal idioms in exactly this way. Kaiser et al. 2015's first recommendation is to incorporate idioms into measurement to improve case identification, and nobody has done it for Kiswahili.
+3. **Sheng and the limits of code-switch ASR.** Deliberately out of scope for the competition build (§5.1), and a genuinely open question. Sheng is absent from every model's training distribution, it is the register young Kenyan mothers actually use for affect (Owidi 2025), and shamiriAI's WER 0.34 is on English/Kiswahili/**Sheng** audio, so the only existing benchmark for this setting already includes it. **The contribution is a Sheng-inclusive code-switched evaluation set with per-register breakdowns**, which would show whether the ASR gap for the youngest and highest-risk mothers is larger than the aggregate figures suggest. This is also the most likely place to find that a product built on aggregate metrics fails a specific population, which is a finding worth publishing on its own.
+
+4. **A Swahili perinatal distress idiom lexicon with construct mappings, released openly.** Currently 15 entries. **The model to follow is the Sierra Leone Perinatal Psychological Distress Scale** (Ager et al. 2025, [doi:10.3389/fpsyt.2025.1419448](https://doi.org/10.3389/fpsyt.2025.1419448)), built from perinatal idioms in exactly this way. Kaiser et al. 2015's first recommendation is to incorporate idioms into measurement to improve case identification, and nobody has done it for Kiswahili.
+
+**Partnership, which belongs here and not in the build.** Once there is a working artefact and a benchmark, **Jacaranda Health** is the first conversation to have (§6.5): ~3M mothers, public-sector integration, a working IVR stack, a published admission of no audio support, and a PPD referral pathway with no screener attached. **A pilot conversation with a real deployment partner is worth more to this project than any feature, and it is impossible to have properly during a compressed build.**
 
 **What must be added to make it publishable:**
 
@@ -2994,7 +3183,7 @@ This work is intended to become a paper. The shape it should take is below, beca
 | **JMIR / PLOS Digital Health** | Right venue for the validation study; **note shamiriAI published in JMIR AI, so there is a precedent for exactly this work in this population** | Requires the validation arm to exist |
 | **Global Mental Health (Cambridge)** | Right venue for the idiom lexicon and the cultural-validity argument | Less credit for the technical contribution |
 
-**RECOMMENDATION: split it into two papers.** Contributions 1 and 2 go to AfricaNLP or Interspeech quickly, using only the benchmark built this week (that paper is nearly written by Monday). Contribution 3 plus the validation arm goes to a health venue on a 12–18 month horizon. **Trying to make one paper carry both a new metric and a clinical validation is how good work sits in a drawer for two years.**
+**RECOMMENDATION: split it into two papers.** Contributions 1 and 2 go to AfricaNLP or Interspeech quickly, using only the benchmark built for the competition (that paper is most of the way written by the time the submission goes in). Contribution 3 plus the validation arm goes to a health venue on a 12–18 month horizon. **Trying to make one paper carry both a new metric and a clinical validation is how good work sits in a drawer for two years.**
 
 **One thing to do this week that costs nothing and matters later:** commit the benchmark with a reproducible seed, the exact chunk boundaries, the model versions, and the raw per-sample CSVs. ⚠️ **Note that Sahara's API exposes no model-version parameter**, so record the date and, if possible, ask Intron in writing which version the key resolved to. Reviewers will ask, and "we asked and they told us" is a complete answer while "v2.5, we assume" is not.
 
