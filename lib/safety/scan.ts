@@ -113,6 +113,46 @@ function levenshtein(a: string, b: string): number {
   return prev[b.length];
 }
 
+/**
+ * Swahili verb morphology, reduced to a comparable root.
+ *
+ * `kuamka` (to wake) and `nisiamke` (that I not wake) are the same verb, but a Levenshtein ratio
+ * between them is 0.5 — far below the 0.85 threshold — so token matching misses the pair entirely.
+ * The held-out safety set found this: "Ningeweza kulala tu nisiamke" was not recalled.
+ *
+ * Stripping the subject/tense/negation prefix and the final vowel leaves `amk` on both sides.
+ * Used ONLY as a fallback after exact and fuzzy matching have failed, and only for roots of 3+
+ * characters, because over-stemming a safety lexicon produces false escalations and §11.4a's whole
+ * lesson is that those train the CHP to dismiss the screen that matters.
+ */
+const SW_VERB_PREFIXES = [
+  "hataku", "hakuta", "ningeli", "ningewe", "asinge", "nisinge", "usinge", "tusinge",
+  "ninge", "singe", "ange", "tunge", "wange", "unge",
+  "hatu", "hawa", "haku", "nisi", "usi", "asi", "tusi", "wasi",
+  "nime", "ume", "ame", "tume", "wame", "nili", "uli", "ali", "tuli", "wali",
+  "nina", "una", "ana", "tuna", "wana", "sita", "siku", "nita", "uta", "ata", "tuta", "wata",
+  "ni", "si", "ha", "ku", "tu", "wa", "a", "u",
+];
+
+export function swahiliStem(token: string): string {
+  let out = token;
+  for (const prefix of SW_VERB_PREFIXES) {
+    if (out.length > prefix.length + 2 && out.startsWith(prefix)) {
+      out = out.slice(prefix.length);
+      break;
+    }
+  }
+  // Swahili verbs inflect their final vowel for mood (-a indicative, -e subjunctive).
+  if (out.length > 3 && "aeiou".includes(out[out.length - 1])) out = out.slice(0, -1);
+  return out;
+}
+
+function stemsMatch(a: string, b: string): boolean {
+  const sa = swahiliStem(a);
+  const sb = swahiliStem(b);
+  return sa.length >= 3 && sb.length >= 3 && sa === sb;
+}
+
 function contentTokens(phrase: string): string[] {
   return tokenize(phrase)
     .map((t) => t.token)
@@ -146,7 +186,7 @@ function matchEntry(
   for (const needle of needles) {
     for (let i = searchFrom; i < transcriptTokens.length; i++) {
       const candidate = transcriptTokens[i];
-      if (similarity(candidate.token, needle) >= TOKEN_MATCH_RATIO) {
+      if (similarity(candidate.token, needle) >= TOKEN_MATCH_RATIO || stemsMatch(candidate.token, needle)) {
         matchedPositions.push({ start: candidate.start, end: candidate.end });
         matchedTokens.push(candidate.token);
         if (firstIndex === -1) firstIndex = i;

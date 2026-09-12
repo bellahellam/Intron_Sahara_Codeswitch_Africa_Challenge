@@ -12,6 +12,7 @@ export type CoverageState =
   | "COVERED_MEDIUM" // 0.60–0.85 — amber, requires a per-item tap
   | "DENIED" // she explicitly said no. Different from absence, and the map must say so.
   | "PROBED_NO_ANSWER" // we asked; nothing usable came back
+  | "CONTESTED" // she both affirmed and denied it across turns — see below
   | "UNCOVERED"; // never reached
 
 export const HIGH_CONFIDENCE = 0.85;
@@ -43,9 +44,9 @@ export interface CoverageUpdate {
 
 /**
  * Rank used so a later weaker signal cannot silently downgrade an established one.
- * DENIED is authoritative over PROBED_NO_ANSWER but not over positive evidence: if she denied
- * a construct on turn 2 and evidenced it on turn 4, that is a contradiction the CHP resolves
- * with her (§12.4), not something this function picks a winner for.
+ *
+ * CONTESTED sits at the top deliberately: once a construct is contested, nothing may quietly
+ * un-contest it. Only the CHP resolving it with the mother can.
  */
 const RANK: Record<CoverageState, number> = {
   UNCOVERED: 0,
@@ -53,12 +54,33 @@ const RANK: Record<CoverageState, number> = {
   DENIED: 2,
   COVERED_MEDIUM: 3,
   COVERED_HIGH: 4,
+  CONTESTED: 5,
 };
+
+/**
+ * §12.4 / §26.8: "Silali kabisa" in turn 2, "nalala vizuri" in turn 4.
+ *
+ * "Surface both quotes side by side, ask the CHP to clarify with her. NEVER SILENTLY PICK ONE."
+ *
+ * An earlier version of this file ranked DENIED below positive evidence, which meant a later
+ * denial was simply outranked and discarded — silently picking one, which is the exact thing the
+ * spec forbids. A contradiction is now its own state, and §26.8's pass criterion follows from it:
+ * no score is written for a contested construct until the CHP resolves it.
+ */
+function isContradiction(previous: CoverageState, next: CoverageState): boolean {
+  const affirmed = (s: CoverageState) => s === "COVERED_HIGH" || s === "COVERED_MEDIUM";
+  return (affirmed(previous) && next === "DENIED") || (previous === "DENIED" && affirmed(next));
+}
 
 export function updateCoverage(current: CoverageMap, update: CoverageUpdate): CoverageMap {
   const next: CoverageMap = { ...current };
 
   const promote = (id: ConstructId, state: CoverageState) => {
+    if (next[id] === "CONTESTED") return; // only a human clears this
+    if (isContradiction(next[id], state)) {
+      next[id] = "CONTESTED";
+      return;
+    }
     if (RANK[state] > RANK[next[id]]) next[id] = state;
   };
 
@@ -91,4 +113,9 @@ export function isSettled(state: CoverageState): boolean {
 
 export function isCovered(state: CoverageState): boolean {
   return state === "COVERED_HIGH" || state === "COVERED_MEDIUM";
+}
+
+/** Contested constructs are excluded from scoring until a human resolves them (§26.8). */
+export function isContested(state: CoverageState): boolean {
+  return state === "CONTESTED";
 }

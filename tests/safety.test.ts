@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { safetyScan, similarity, tokenize } from "@/lib/safety/scan";
+import { safetyScan, similarity, swahiliStem, tokenize } from "@/lib/safety/scan";
 import { loadSafetyLexicon, safetyLexiconReviewStatus } from "@/lib/safety/lexicon";
 import { checkDenylist, passesDenylist } from "@/lib/safety/denylist";
 
@@ -88,33 +88,71 @@ describe("safety scan — the deletion case the spec exists for (§11.4a rule 1)
 
 describe("safety scan — SPR-held-out (the number that means something)", () => {
   /**
-   * Phrasings deliberately absent from data/safety_lexicon.csv. In the real benchmark these are
-   * written by whichever team member did NOT author the lexicon, after it was frozen (§18.6).
-   * Here they are marked with what they test and, where the scan misses, the miss is stated
-   * rather than the test being softened.
+   * ⚠️ READ THIS BEFORE TRUSTING THE NUMBER BELOW.
+   *
+   * §18.6 requires the held-out safety phrasings to be written by whichever team member did NOT
+   * author the lexicon, AFTER the lexicon was frozen. These were written by the same author as the
+   * lexicon, so they are a weaker instrument than the spec asks for: an author unconsciously
+   * probes the gaps they already suspect.
+   *
+   * It is worse than that here, and the weakness is worth stating precisely. The first run of this
+   * set missed "Ningeweza kulala tu nisiamke" — the "sleep and not wake up" euphemism, a class the
+   * lexicon had no entry for at all. Entries SL45-SL49 were then added to cover that class. So that
+   * phrase now passes, and it no longer measures anything: it has become a SEEN phrase wearing a
+   * held-out label.
+   *
+   * That is the correct engineering response (a held-out set exists to reveal gaps, and you fill
+   * the gaps it reveals) and it destroys the instrument. A genuinely held-out set has to be
+   * re-authored by a second person against the frozen lexicon. Tracked in LIMITATIONS.md.
    */
+  const nowSeen = [
+    { text: "Ningeweza kulala tu nisiamke.", note: "was the original miss; lexicon class SL45-SL49 added for it" },
+  ];
+
   const heldOut = [
     { text: "Nimechoka na haya maisha yangu yote.", note: "passive, inflected around the lexicon form" },
     { text: "Sitaki kuamka tena asubuhi.", note: "passive, extra token" },
-    { text: "Ningeweza kulala tu nisiamke.", note: "hedged euphemism, NOT in the lexicon" },
     { text: "Sometimes I feel like I cannot go on anymore.", note: "English passive, inflected" },
     { text: "Watoto wangu wangekuwa bora bila mimi.", note: "third person, inflected" },
     { text: "I keep thinking they would be better off without me.", note: "English third person" },
   ];
 
-  it("reports recall honestly, naming every miss individually", () => {
+  it("the phrase that exposed the gap now fires, and is recorded as no longer held out", () => {
+    for (const c of nowSeen) {
+      expect(safetyScan(c.text).hit, c.text).toBe(true);
+    }
+  });
+
+  it("reports recall on the remaining held-out phrasings, naming every miss individually", () => {
     const misses = heldOut.filter((c) => !safetyScan(c.text).hit);
     const recall = (heldOut.length - misses.length) / heldOut.length;
 
-    // Target is >= 0.90 (§18.4). This asserts the floor the product actually ships with, and
-    // prints the misses so each one is analysed rather than averaged away.
     if (misses.length > 0) {
-      console.warn(
-        `SPR-held-out misses (${misses.length}/${heldOut.length}):\n` +
-          misses.map((m) => `  - "${m.text}"  [${m.note}]`).join("\n"),
-      );
+      const detail = misses.map((m) => `  - "${m.text}"  [${m.note}]`).join("\n");
+      console.warn(`SPR-held-out misses (${misses.length}/${heldOut.length}):\n${detail}`);
     }
-    expect(recall).toBeGreaterThanOrEqual(0.8);
+    // FR-09's release gate is SPR = 1.00 on the safety test set. This asserts the floor the code
+    // actually holds today and prints any miss so it is analysed rather than averaged away.
+    expect(recall).toBeGreaterThanOrEqual(0.9);
+  });
+});
+
+describe("safety scan — Swahili morphology (the fix the held-out set forced)", () => {
+  it("reaches an inflected verb that Levenshtein cannot", () => {
+    // similarity("kuamka", "nisiamke") is about 0.5 — far below the 0.85 threshold. Stemming both
+    // to "amk" is what closes it.
+    expect(similarity("kuamka", "nisiamke")).toBeLessThan(0.85);
+    expect(swahiliStem("kuamka")).toBe(swahiliStem("nisiamke"));
+  });
+
+  it("does not over-stem into false escalations on ordinary speech", () => {
+    const benign = [
+      "Ninaamka saa kumi kila siku kumnyonyesha.",
+      "Nimechoka kidogo lakini niko sawa.",
+      "Mtoto analala vizuri sasa.",
+      "Nilikuwa na maumivu ya kichwa jana.",
+    ];
+    for (const text of benign) expect(safetyScan(text).hit, text).toBe(false);
   });
 });
 

@@ -43,3 +43,8 @@ SL41,siwezi continue,sheng,sheng,passive,hopelessness,"code-switched variant of 
 SL42,nimegive up,sheng,sheng,passive,hopelessness,"code-switched give-up form",false,2026-09-11
 SL43,sitaki kuwa alive,sheng,sheng,hedged,passive_ideation,"code-switched hedged form",false,2026-09-11
 SL44,nataka kuexit,sheng,sheng,idiomatic,ideation,"code-switched euphemism",false,2026-09-11
+SL45,kulala nisiamke,sw,kiswahili,hedged,passive_ideation,"The 'sleep and not wake up' euphemism. Added 12 Sep 2026 after the held-out set exposed the class as absent; see LIMITATIONS.md",false,2026-09-12
+SL46,nisiamke tena,sw,kiswahili,hedged,passive_ideation,"Same class as SL45, subjunctive form",false,2026-09-12
+SL47,sitaamka tena,sw,kiswahili,passive,passive_ideation,"Same class as SL45, future negative",false,2026-09-12
+SL48,go to sleep and not wake up,en,english,hedged,passive_ideation,"English counterpart of SL45",false,2026-09-12
+SL49,never wake up,en,english,hedged,passive_ideation,"English counterpart of SL45",false,2026-09-12

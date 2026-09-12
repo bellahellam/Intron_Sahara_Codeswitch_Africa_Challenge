@@ -3,7 +3,7 @@ import { prisma, audit, toJsonColumn, fromJsonColumn } from "@/lib/db";
 import { score, type ScoredItem } from "@/lib/clinical/score";
 import { routeReferral } from "@/lib/clinical/route";
 import { isConstructId, type ConstructId } from "@/lib/clinical/constructs";
-import { bandForConfidence } from "@/lib/clinical/coverage";
+import { bandForConfidence, emptyCoverage, type CoverageMap } from "@/lib/clinical/coverage";
 import { generateBackRead, generateHandover, handoverHeader } from "@/lib/agent/summarise";
 import { dedupeQuotes } from "@/lib/agent/quotes";
 import { loadSomaticTerms } from "@/lib/safety/lexicon";
@@ -104,9 +104,17 @@ export async function POST(req: Request) {
   }
 
   // ---- score, deterministically -------------------------------------------------------
+  // §26.8: a construct she both affirmed and denied is CONTESTED. No score is written for it
+  // until a human resolves it with her, so it is excluded here rather than silently resolved.
+  const coverage = fromJsonColumn<CoverageMap>(session.coverageJson, emptyCoverage());
+  const contested = Object.entries(coverage)
+    .filter(([, state]) => state === "CONTESTED")
+    .map(([id]) => id);
+
   const scored: ScoredItem[] = [];
   for (const item of stored) {
     if (!isConstructId(item.construct)) continue;
+    if (contested.includes(item.construct)) continue; // unresolved contradiction
     if (item.somatic_only) continue; // never populates a construct (FR-12)
     const band = bandForConfidence(item.confidence);
     if (band === "low") continue; // was never populated; silence beats a guess
@@ -197,6 +205,7 @@ export async function POST(req: Request) {
       disclaimersJson: toJsonColumn([
         "not_a_diagnosis",
         "instrument_not_criterion_validated_in_swahili",
+        ...(contested.length > 0 ? ["unresolved_contradiction_excluded_from_score"] : []),
         ...(referral.incomplete ? ["incomplete_screen"] : []),
         ...(possibleUnderEndorsement ? ["possible_under_endorsement"] : []),
         ...(backRead.fellBackToTemplate || handover.fellBackToTemplate ? ["generated_text_withheld_by_safety_check"] : []),
@@ -224,6 +233,7 @@ export async function POST(req: Request) {
     tier: referral.tier,
     ruleApplied: referral.ruleApplied,
     incomplete: referral.incomplete,
+    contestedCount: contested.length,
     backReadFellBack: backRead.fellBackToTemplate,
     handoverFellBack: handover.fellBackToTemplate,
   });
@@ -232,6 +242,7 @@ export async function POST(req: Request) {
     recordId: record.id,
     scores,
     referral,
+    contested,
     backRead: backRead.text,
     handoverEn,
     possibleUnderEndorsement,

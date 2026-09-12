@@ -89,14 +89,41 @@ export function isKnownPrompt(span: string, probeIssued: string | null | undefin
  * phrasing. It reduces the failure from "the model decides" to "the model decides, unless the
  * obvious case is present."
  */
+/**
+ * Swahili is agglutinative, so a lexicon term appears inside inflected forms rather than as a
+ * standalone token: `mwili` (body) shows up as `kimwili` (bodily, adverbial) and `mwilini` (in the
+ * body). Exact token matching misses all of those.
+ *
+ * This was found by §26.7's own fixture. "Nimechoka sana kimwili" — a purely physical report —
+ * populated a depression construct at confidence 0.88, because the backstop looked for `mwili` and
+ * she had said `kimwili`. That is precisely the error the product exists to prevent, so the
+ * matcher now matches a term that occurs INSIDE a token.
+ *
+ * Minimum length 4 keeps this from firing on short fragments; a 3-letter term inside a longer word
+ * would match far too much.
+ */
+function lexiconMatches(terms: Set<string>, tokens: string[], text: string): boolean {
+  for (const token of tokens) {
+    if (terms.has(token)) return true;
+    for (const term of terms) {
+      if (term.length >= 4 && !term.includes(" ") && token.includes(term)) return true;
+    }
+  }
+  // Multi-word entries are matched against the whole span.
+  for (const term of terms) {
+    if (term.includes(" ") && text.includes(term)) return true;
+  }
+  return false;
+}
+
 export function applySomaticBackstop(item: ExtractionItem): { item: ExtractionItem; fired: boolean } {
   const somatic = loadSomaticTerms();
   const psych = loadPsychMarkers();
   const tokens = tokenize(normalise(item.evidence_span)).map((t) => t.token);
   const text = normalise(item.evidence_span);
 
-  const hasSomatic = tokens.some((t) => somatic.has(t)) || [...somatic].some((t) => t.includes(" ") && text.includes(t));
-  const hasPsych = tokens.some((t) => psych.has(t)) || [...psych].some((t) => t.includes(" ") && text.includes(t));
+  const hasSomatic = lexiconMatches(somatic, tokens, text);
+  const hasPsych = lexiconMatches(psych, tokens, text);
 
   if (hasSomatic && !hasPsych) {
     return {

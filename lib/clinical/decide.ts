@@ -138,6 +138,19 @@ export function decide(input: DecisionInput): Decision {
     };
   }
 
+  // §26.8: she affirmed and denied the same construct across turns. The system must not pick a
+  // winner; it asks the CHP to clarify with her. Ranked above the medium-confidence sweep because
+  // a contradiction is a stronger reason to ask than mere uncertainty.
+  const contested = PROBE_PRIORITY.find((id) => coverage[id] === "CONTESTED");
+  if (contested && turnIndex < MAX_TURNS) {
+    return {
+      action: "PROBE",
+      targetConstruct: contested,
+      rationale:
+        "She both affirmed and denied this construct across turns. Surfacing both quotes for the CHP to clarify; no score is written until it is resolved.",
+    };
+  }
+
   const medium = PROBE_PRIORITY.find((id) => coverage[id] === "COVERED_MEDIUM");
   if (medium && turnIndex < MAX_TURNS) {
     return {
