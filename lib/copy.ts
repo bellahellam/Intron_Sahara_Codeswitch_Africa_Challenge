@@ -53,6 +53,7 @@ export const COPY = {
     riskFlag: { sw: "Alama ya hatari", en: "Raise risk flag" },
     finish: { sw: "Maliza", en: "Finish" },
     confirm: { sw: "Thibitisha", en: "Confirm" },
+    neither: { sw: "Hakuna", en: "Neither" },
     confirmAndRead: { sw: "Thibitisha na soma kwa mama", en: "Confirm and read to the mother" },
     sendReferral: { sw: "Tuma rufaa", en: "Send referral" },
     copy: { sw: "Nakili", en: "Copy" },
@@ -194,9 +195,19 @@ export const COPY = {
     medium: { sw: "Thibitisha", en: "Confirm" },
   },
 
+  /**
+   * S6: a construct she both affirmed and denied. The system must not pick a winner;
+   * the CHP chooses which quote stands, or neither.
+   */
+  contested: {
+    sw: "Alisema na kukanusha jambo hili. Chagua nukuu inayosimama, au hakuna.",
+    en: "She both affirmed and denied this. Pick which quote stands, or neither.",
+  },
+
   /** §16.5a rule 5: a disabled control always carries its reason inline. */
   disabledReasons: {
     amberPending: { sw: "Thibitisha vipengele vya njano kwanza", en: "Confirm the amber items first" },
+    contestedPending: { sw: "Chagua nukuu inayosimama kwanza", en: "Pick which quote stands first" },
     consentPending: { sw: "Ruhusa inahitajika kwanza", en: "Consent is required first" },
   },
 

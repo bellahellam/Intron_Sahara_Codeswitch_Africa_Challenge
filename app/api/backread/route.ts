@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma, fromJsonColumn } from "@/lib/db";
-import { score, type ScoredItem } from "@/lib/clinical/score";
+import { score } from "@/lib/clinical/score";
 import { routeReferral } from "@/lib/clinical/route";
-import { isConstructId, type ConstructId } from "@/lib/clinical/constructs";
-import { bandForConfidence } from "@/lib/clinical/coverage";
+import { emptyCoverage, type CoverageMap } from "@/lib/clinical/coverage";
+import { prepareReviewScoring } from "@/lib/clinical/review";
+import { isShortPathTermination } from "@/lib/clinical/decide";
 import { generateBackRead } from "@/lib/agent/summarise";
 import { dedupeQuotes } from "@/lib/agent/quotes";
 import { canAccessChp } from "@/lib/auth/session";
@@ -61,35 +62,22 @@ export async function POST(req: Request) {
     return extraction.items ?? [];
   });
 
-  const state = new Map((body.items ?? []).map((s) => [`${s.construct}::${s.evidence_span}`, s]));
+  const coverage = fromJsonColumn<CoverageMap>(session.coverageJson, emptyCoverage());
+  const reviewed = prepareReviewScoring({
+    coverage,
+    stored,
+    clientItems: body.items ?? [],
+  });
 
-  const scored: ScoredItem[] = [];
-  const quotes: Array<{ construct: string; span: string }> = [];
-
-  for (const item of stored) {
-    if (!isConstructId(item.construct) || item.somatic_only) continue;
-    const band = bandForConfidence(item.confidence);
-    if (band === "low") continue;
-    const s = state.get(`${item.construct}::${item.evidence_span}`);
-    if (s?.disputed) continue;
-    scored.push({
-      construct: item.construct as ConstructId,
-      severity: item.severity_estimate,
-      confirmedByChp: band === "high" ? true : s?.confirmed === true,
-      motherDisputed: false,
-    });
-    quotes.push({ construct: item.construct, span: item.evidence_span });
-  }
-
-  const scores = score(scored);
+  const scores = score(reviewed.scored);
   const referral = routeReferral({
     scores,
     sessionEscalated: session.escalated,
-    shortPathNegative: session.termination === "short_path_negative",
+    shortPathNegative: isShortPathTermination(session.termination),
   });
 
   const backRead = await generateBackRead({
-    quotes: dedupeQuotes(quotes),
+    quotes: dedupeQuotes(reviewed.quoteSpans),
     scores,
     referral,
     escalated: session.escalated,

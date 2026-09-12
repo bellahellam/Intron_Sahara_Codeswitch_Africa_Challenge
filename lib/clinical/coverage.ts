@@ -119,3 +119,85 @@ export function isCovered(state: CoverageState): boolean {
 export function isContested(state: CoverageState): boolean {
   return state === "CONTESTED";
 }
+
+/**
+ * The CHP's resolution of a CONTESTED construct on review.
+ *
+ * `standingSpan` is the evidence quote that stands. `null` means neither quote stands — the
+ * construct is recorded as denied rather than silently dropped as a whole.
+ */
+export interface ContestedResolution {
+  construct: ConstructId;
+  standingSpan: string | null;
+  standingConfidence?: number;
+}
+
+export interface ReviewItemState {
+  construct: string;
+  evidence_span: string;
+  confirmed: boolean;
+  disputed: boolean;
+}
+
+/**
+ * The only path that may clear CONTESTED. `updateCoverage` will not: a later extraction must
+ * not quietly pick a winner. The CHP does, by choosing which quote stands or neither.
+ */
+export function applyContestedResolutions(
+  coverage: CoverageMap,
+  resolutions: readonly ContestedResolution[],
+): CoverageMap {
+  const next: CoverageMap = { ...coverage };
+  for (const resolution of resolutions) {
+    if (next[resolution.construct] !== "CONTESTED") continue;
+    if (resolution.standingSpan == null) {
+      next[resolution.construct] = "DENIED";
+      continue;
+    }
+    const band = bandForConfidence(resolution.standingConfidence ?? HIGH_CONFIDENCE);
+    next[resolution.construct] = band === "medium" ? "COVERED_MEDIUM" : "COVERED_HIGH";
+  }
+  return next;
+}
+
+/**
+ * Derive resolutions from the per-quote confirm/dispute taps on review.
+ *
+ * Exactly one confirmed quote → that quote stands. Every quote disputed → neither stands.
+ * Any other mix is unresolved and omitted, so coverage stays CONTESTED.
+ */
+export function contestedResolutionsFromItems(
+  coverage: CoverageMap,
+  items: readonly ReviewItemState[],
+  stored: ReadonlyArray<{ construct: string; evidence_span: string; confidence: number }> = [],
+): ContestedResolution[] {
+  const confidenceByKey = new Map(stored.map((s) => [`${s.construct}::${s.evidence_span}`, s.confidence]));
+  const out: ContestedResolution[] = [];
+  for (const id of CONSTRUCT_IDS) {
+    if (coverage[id] !== "CONTESTED") continue;
+    const group = items.filter((i) => i.construct === id);
+    if (group.length === 0) continue;
+    const standing = group.filter((i) => i.confirmed && !i.disputed);
+    if (standing.length === 1) {
+      const span = standing[0].evidence_span;
+      out.push({
+        construct: id,
+        standingSpan: span,
+        standingConfidence: confidenceByKey.get(`${id}::${span}`),
+      });
+    } else if (group.every((i) => i.disputed)) {
+      out.push({ construct: id, standingSpan: null });
+    }
+  }
+  return out;
+}
+
+export function isContestedConstructResolved(
+  items: readonly ReviewItemState[],
+  construct: string,
+): boolean {
+  const group = items.filter((i) => i.construct === construct);
+  if (group.length === 0) return false;
+  const standing = group.filter((i) => i.confirmed && !i.disputed);
+  return standing.length === 1 || group.every((i) => i.disputed);
+}

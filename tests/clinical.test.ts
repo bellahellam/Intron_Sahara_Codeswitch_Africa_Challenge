@@ -10,9 +10,15 @@
 import { describe, expect, it } from "vitest";
 import { gad7Band, phq9Band, score, type ScoredItem } from "@/lib/clinical/score";
 import { routeReferral } from "@/lib/clinical/route";
-import { decide, MAX_TURNS } from "@/lib/clinical/decide";
-import { emptyCoverage, updateCoverage, type CoverageMap } from "@/lib/clinical/coverage";
+import { decide, isShortPathTermination, MAX_TURNS } from "@/lib/clinical/decide";
+import {
+  applyContestedResolutions,
+  emptyCoverage,
+  updateCoverage,
+  type CoverageMap,
+} from "@/lib/clinical/coverage";
 import { CONSTRUCT_IDS, type ConstructId } from "@/lib/clinical/constructs";
+import { prepareReviewScoring } from "@/lib/clinical/review";
 
 function item(construct: ConstructId, severity: number, opts: Partial<ScoredItem> = {}): ScoredItem {
   return { construct, severity, confirmedByChp: true, motherDisputed: false, ...opts };
@@ -165,7 +171,7 @@ describe("decide() — the item-9 gate (§11.6)", () => {
     const states = ["COVERED_HIGH", "COVERED_MEDIUM", "DENIED", "PROBED_NO_ANSWER"] as const;
 
     for (const state of states) {
-      for (const turnIndex of [0, 1, 3, 5]) {
+      for (const turnIndex of [0, 1, 3, 5, MAX_TURNS, MAX_TURNS + 1, MAX_TURNS + 2]) {
         for (const [phq2Score, gad2Score] of [[0, 0], [2, 2], [4, 4], [6, 6]]) {
           const map = emptyCoverage();
           // Everything covered EXCEPT item 9.
@@ -197,6 +203,24 @@ describe("decide() — the item-9 gate (§11.6)", () => {
     expect(d.incompleteCoverage).toBe(false);
   });
 
+  it("a negative short path round-trips into referral.incomplete === false", () => {
+    const map = covered(["phq9_1", "phq9_2", "gad7_1", "gad7_2"]);
+    map.phq9_9 = "DENIED";
+    const d = decide({ ...baseInput, coverage: map, phq2Score: 0, gad2Score: 0 });
+    expect(d.termination).toBe("short_path_negative");
+    expect(isShortPathTermination(d.termination)).toBe(true);
+
+    // Fewer than 6 PHQ-9 items — the same shape complete/back-read persist after a short path.
+    const scores = score([item("phq9_1", 1), item("phq9_2", 1)]);
+    expect(scores.coverage.phq9ItemsEvidenced).toBeLessThan(6);
+    const r = routeReferral({
+      scores,
+      sessionEscalated: false,
+      shortPathNegative: isShortPathTermination(d.termination),
+    });
+    expect(r.incomplete).toBe(false);
+  });
+
   it("a skipped item-9 probe (PROBED_NO_ANSWER) satisfies the gate but is recorded", () => {
     const map = covered(["phq9_1", "phq9_2", "gad7_1", "gad7_2"]);
     map.phq9_9 = "PROBED_NO_ANSWER";
@@ -212,8 +236,17 @@ describe("decide() — the item-9 gate (§11.6)", () => {
     }
   });
 
-  it("the turn budget completes and flags incomplete coverage", () => {
+  it("the item-9 gate outranks the turn budget — one extra turn is allowed to ask it", () => {
     const d = decide({ ...baseInput, coverage: emptyCoverage(), turnIndex: MAX_TURNS });
+    expect(d.action).toBe("PROBE");
+    expect(d.targetConstruct).toBe("phq9_9");
+    expect(d.useFixedItem9Probe).toBe(true);
+  });
+
+  it("the turn budget completes and flags incomplete coverage once item 9 is settled", () => {
+    const coverage = emptyCoverage();
+    coverage.phq9_9 = "DENIED";
+    const d = decide({ ...baseInput, coverage, turnIndex: MAX_TURNS });
     expect(d.action).toBe("COMPLETE");
     expect(d.termination).toBe("turn_budget");
     expect(d.incompleteCoverage).toBe(true);
@@ -286,5 +319,109 @@ describe("updateCoverage() — denial and absence are different states", () => {
       denied: [],
     });
     expect(map.phq9_1).toBe("COVERED_HIGH");
+  });
+
+  it("a human resolution is the only thing that clears CONTESTED", () => {
+    let map = updateCoverage(emptyCoverage(), {
+      items: [{ construct: "phq9_3", confidence: 0.9, somaticOnly: false }],
+      denied: [],
+    });
+    map = updateCoverage(map, { items: [], denied: ["phq9_3"] });
+    expect(map.phq9_3).toBe("CONTESTED");
+    map = updateCoverage(map, {
+      items: [{ construct: "phq9_3", confidence: 0.99, somaticOnly: false }],
+      denied: [],
+    });
+    expect(map.phq9_3).toBe("CONTESTED");
+
+    const affirmed = applyContestedResolutions(map, [
+      { construct: "phq9_3", standingSpan: "Silali kabisa", standingConfidence: 0.9 },
+    ]);
+    expect(affirmed.phq9_3).toBe("COVERED_HIGH");
+
+    const neither = applyContestedResolutions(map, [{ construct: "phq9_3", standingSpan: null }]);
+    expect(neither.phq9_3).toBe("DENIED");
+  });
+});
+
+describe("prepareReviewScoring() — CONTESTED resolution is honoured", () => {
+  const stored = [
+    {
+      construct: "phq9_3",
+      evidence_span: "Silali kabisa",
+      severity_estimate: 3,
+      confidence: 0.9,
+      somatic_only: false,
+    },
+    {
+      construct: "phq9_3",
+      evidence_span: "nalala vizuri",
+      severity_estimate: 0,
+      confidence: 0.88,
+      somatic_only: false,
+    },
+    {
+      construct: "phq9_1",
+      evidence_span: "sifurahii kitu",
+      severity_estimate: 2,
+      confidence: 0.9,
+      somatic_only: false,
+    },
+  ];
+
+  function contestedCoverage(): CoverageMap {
+    const map = emptyCoverage();
+    map.phq9_3 = "CONTESTED";
+    map.phq9_1 = "COVERED_HIGH";
+    return map;
+  }
+
+  it("confirming one quote scores that quote and does not drop the construct", () => {
+    const reviewed = prepareReviewScoring({
+      coverage: contestedCoverage(),
+      stored,
+      clientItems: [
+        { construct: "phq9_3", evidence_span: "Silali kabisa", confirmed: true, disputed: false },
+        { construct: "phq9_3", evidence_span: "nalala vizuri", confirmed: false, disputed: true },
+        { construct: "phq9_1", evidence_span: "sifurahii kitu", confirmed: true, disputed: false },
+      ],
+    });
+    expect(reviewed.coverage.phq9_3).toBe("COVERED_HIGH");
+    expect(reviewed.stillContested).toEqual([]);
+    const s = score(reviewed.scored);
+    expect(s.phq9).toBe(5); // 3 from the standing sleep quote + 2 from anhedonia
+    expect(reviewed.quoteSpans.map((q) => q.span)).toEqual(["Silali kabisa", "sifurahii kitu"]);
+  });
+
+  it("neither quote standing excludes the construct without leaving it CONTESTED", () => {
+    const reviewed = prepareReviewScoring({
+      coverage: contestedCoverage(),
+      stored,
+      clientItems: [
+        { construct: "phq9_3", evidence_span: "Silali kabisa", confirmed: false, disputed: true },
+        { construct: "phq9_3", evidence_span: "nalala vizuri", confirmed: false, disputed: true },
+        { construct: "phq9_1", evidence_span: "sifurahii kitu", confirmed: true, disputed: false },
+      ],
+    });
+    expect(reviewed.coverage.phq9_3).toBe("DENIED");
+    expect(reviewed.stillContested).toEqual([]);
+    const s = score(reviewed.scored);
+    expect(s.phq9).toBe(2);
+  });
+
+  it("an unresolved contradiction is still excluded, not silently picked", () => {
+    const reviewed = prepareReviewScoring({
+      coverage: contestedCoverage(),
+      stored,
+      clientItems: [
+        { construct: "phq9_3", evidence_span: "Silali kabisa", confirmed: false, disputed: false },
+        { construct: "phq9_3", evidence_span: "nalala vizuri", confirmed: false, disputed: false },
+        { construct: "phq9_1", evidence_span: "sifurahii kitu", confirmed: true, disputed: false },
+      ],
+    });
+    expect(reviewed.coverage.phq9_3).toBe("CONTESTED");
+    expect(reviewed.stillContested).toEqual(["phq9_3"]);
+    const s = score(reviewed.scored);
+    expect(s.phq9).toBe(2);
   });
 });

@@ -56,6 +56,11 @@ function allCovered(coverage: CoverageMap, ids: readonly ConstructId[]): boolean
   return ids.every((id) => isCovered(coverage[id]) || coverage[id] === "DENIED");
 }
 
+/** The predicate complete and back-read use against `Session.termination`. */
+export function isShortPathTermination(termination: string | null | undefined): boolean {
+  return termination === "short_path_negative";
+}
+
 export function decide(input: DecisionInput): Decision {
   const { coverage, turnIndex, safetyHit, riskFlag, phq2Score, gad2Score } = input;
 
@@ -69,23 +74,16 @@ export function decide(input: DecisionInput): Decision {
     };
   }
 
-  if (turnIndex >= MAX_TURNS) {
-    return {
-      action: "COMPLETE",
-      targetConstruct: null,
-      rationale: `Turn budget reached (${MAX_TURNS}).`,
-      termination: "turn_budget",
-      incompleteCoverage: true,
-    };
-  }
-
-  // ---- THE ITEM-9 GATE. Evaluated before every completion path. ----
+  // ---- THE ITEM-9 GATE. Evaluated before every completion path, including the turn budget. ----
   //
   // An earlier draft placed the negative short path first, which meant a mother who screened
   // negative on PHQ-2 and GAD-2 would complete the session without ever being asked about
-  // self-harm. That is exactly backwards: suicidal ideation is not conditional on a positive
-  // depression screen, and a low-scoring screen is the population where an unasked question is
-  // most dangerous. This is a hard precondition on completion, not a priority-ranked preference.
+  // self-harm. A later draft put MAX_TURNS above this gate, which meant a session that burned
+  // turns on extraction failures could COMPLETE without the suicide question. Both are exactly
+  // backwards: suicidal ideation is not conditional on a positive depression screen, and a
+  // low-scoring or truncated screen is the population where an unasked question is most
+  // dangerous. This is a hard precondition on completion, not a priority-ranked preference.
+  // The turn budget may be exceeded by one turn so the fixed probe can still be issued.
   if (coverage[ITEM_9] === "UNCOVERED") {
     return {
       action: "PROBE",
@@ -95,6 +93,16 @@ export function decide(input: DecisionInput): Decision {
     };
   }
   // ------------------------------------------------------------------
+
+  if (turnIndex >= MAX_TURNS) {
+    return {
+      action: "COMPLETE",
+      targetConstruct: null,
+      rationale: `Turn budget reached (${MAX_TURNS}).`,
+      termination: "turn_budget",
+      incompleteCoverage: true,
+    };
+  }
 
   // Negative short path. Only reachable once the item-9 gate above has been satisfied.
   if (allCovered(coverage, PHQ2_IDS) && phq2Score < 3 && allCovered(coverage, GAD2_IDS) && gad2Score < 3) {

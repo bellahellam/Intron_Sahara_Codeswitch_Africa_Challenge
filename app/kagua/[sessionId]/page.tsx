@@ -19,7 +19,12 @@ import { use, useEffect, useState } from "react";
 import { COPY } from "@/lib/copy";
 import { Header, PrimaryButton, ErrorCard } from "@/components/ui";
 import { EvidenceCard, type EvidenceItem } from "@/components/EvidenceCard";
-import { bandForConfidence } from "@/lib/clinical/coverage";
+import {
+  bandForConfidence,
+  emptyCoverage,
+  isContestedConstructResolved,
+  type CoverageMap,
+} from "@/lib/clinical/coverage";
 
 type Stage = "confirm" | "backread";
 
@@ -29,6 +34,7 @@ export default function Review({ params }: { params: Promise<{ sessionId: string
   const router = useRouter();
 
   const [items, setItems] = useState<EvidenceItem[]>([]);
+  const [coverage, setCoverage] = useState<CoverageMap>(emptyCoverage());
   const [stage, setStage] = useState<Stage>("confirm");
   const [backRead, setBackRead] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,7 +45,10 @@ export default function Review({ params }: { params: Promise<{ sessionId: string
     fetch(`/api/session/${sessionId}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (d) setItems(d.items ?? []);
+        if (d) {
+          setItems(d.items ?? []);
+          if (d.coverage) setCoverage(d.coverage);
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -48,8 +57,25 @@ export default function Review({ params }: { params: Promise<{ sessionId: string
   // Only items that were actually populated appear. Low-confidence ones were never populated,
   // and somatic-only ones were capped below the threshold on purpose.
   const visible = items.filter((i) => !i.somatic_only && bandForConfidence(i.confidence) !== "low");
-  const amber = visible.filter((i) => bandForConfidence(i.confidence) === "medium");
-  const unresolved = amber.filter((i) => !i.confirmed && !i.disputed);
+  const contestedIds = Object.entries(coverage)
+    .filter(([, state]) => state === "CONTESTED")
+    .map(([id]) => id);
+  const contestedSet = new Set(contestedIds);
+  const regular = visible.filter((i) => !contestedSet.has(i.construct));
+  const amber = regular.filter((i) => bandForConfidence(i.confidence) === "medium");
+  const unresolvedAmber = amber.filter((i) => !i.confirmed && !i.disputed);
+  const unresolvedContested = contestedIds.filter((id) => {
+    const group = visible.filter((i) => i.construct === id);
+    return !isContestedConstructResolved(
+      group.map((i) => ({
+        construct: i.construct,
+        evidence_span: i.evidence_span,
+        confirmed: i.confirmed === true,
+        disputed: i.disputed === true,
+      })),
+      id,
+    );
+  });
 
   function itemStates() {
     return visible.map((i) => ({
@@ -58,6 +84,26 @@ export default function Review({ params }: { params: Promise<{ sessionId: string
       confirmed: i.confirmed === true,
       disputed: i.disputed === true,
     }));
+  }
+
+  function pickStanding(construct: string, span: string) {
+    setItems((prev) =>
+      prev.map((it) =>
+        it.construct !== construct
+          ? it
+          : it.evidence_span === span
+            ? { ...it, confirmed: true, disputed: false }
+            : { ...it, confirmed: false, disputed: true },
+      ),
+    );
+  }
+
+  function pickNeither(construct: string) {
+    setItems((prev) =>
+      prev.map((it) =>
+        it.construct === construct ? { ...it, confirmed: false, disputed: true } : it,
+      ),
+    );
   }
 
   /** Stage 1 → 2. Generates the back-read. Persists NOTHING: she still gets the last word. */
@@ -144,17 +190,48 @@ export default function Review({ params }: { params: Promise<{ sessionId: string
               </p>
             ) : (
               <>
-                {unresolved.length > 0 && (
+                {unresolvedAmber.length > 0 && (
                   <div className="rounded-md border border-warning bg-white px-3 py-2 text-sm">
                     <p className="font-medium text-warning">
-                      ! {COPY.states.confirming.sw} ({unresolved.length})
+                      ! {COPY.states.confirming.sw} ({unresolvedAmber.length})
                     </p>
                     <p className="gloss not-italic">{COPY.states.confirming.en}</p>
                   </div>
                 )}
 
+                {unresolvedContested.length > 0 && (
+                  <div className="rounded-md border border-warning bg-white px-3 py-2 text-sm">
+                    <p className="font-medium text-warning">! {COPY.contested.sw}</p>
+                    <p className="gloss not-italic">{COPY.contested.en}</p>
+                  </div>
+                )}
+
+                {contestedIds.map((id) => {
+                  const group = visible.filter((i) => i.construct === id);
+                  if (group.length === 0) return null;
+                  return (
+                    <section key={id} className="space-y-3 rounded-md border border-warning/40 p-3">
+                      <p className="text-sm text-neutral-700">
+                        {COPY.contested.sw}
+                        <span className="gloss block not-italic">{COPY.contested.en}</span>
+                      </p>
+                      {group.map((item, i) => (
+                        <EvidenceCard
+                          key={`${item.construct}-${i}`}
+                          item={item}
+                          onConfirm={() => pickStanding(item.construct, item.evidence_span)}
+                        />
+                      ))}
+                      <button type="button" onClick={() => pickNeither(id)} className="btn-quiet">
+                        {COPY.buttons.neither.sw}
+                        <span className="gloss ml-1 not-italic">({COPY.buttons.neither.en})</span>
+                      </button>
+                    </section>
+                  );
+                })}
+
                 <section className="space-y-3">
-                  {visible.map((item, i) => (
+                  {regular.map((item, i) => (
                     <EvidenceCard
                       key={`${item.construct}-${i}`}
                       item={item}
@@ -220,9 +297,13 @@ export default function Review({ params }: { params: Promise<{ sessionId: string
         {stage === "confirm" ? (
           <PrimaryButton
             onClick={toBackRead}
-            disabled={unresolved.length > 0 || busy}
+            disabled={unresolvedAmber.length > 0 || unresolvedContested.length > 0 || busy}
             disabledReason={
-              unresolved.length > 0 ? COPY.disabledReasons.amberPending.sw : undefined
+              unresolvedContested.length > 0
+                ? COPY.disabledReasons.contestedPending.sw
+                : unresolvedAmber.length > 0
+                  ? COPY.disabledReasons.amberPending.sw
+                  : undefined
             }
           >
             {busy ? "Inaandaa..." : COPY.buttons.confirmAndRead.sw}

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma, audit, toJsonColumn, fromJsonColumn } from "@/lib/db";
-import { score, type ScoredItem } from "@/lib/clinical/score";
+import { score } from "@/lib/clinical/score";
 import { routeReferral } from "@/lib/clinical/route";
-import { isConstructId, type ConstructId } from "@/lib/clinical/constructs";
 import { bandForConfidence, emptyCoverage, type CoverageMap } from "@/lib/clinical/coverage";
+import { prepareReviewScoring } from "@/lib/clinical/review";
+import { isShortPathTermination } from "@/lib/clinical/decide";
 import { generateBackRead, generateHandover, handoverHeader } from "@/lib/agent/summarise";
 import { dedupeQuotes } from "@/lib/agent/quotes";
 import { loadSomaticTerms } from "@/lib/safety/lexicon";
@@ -88,9 +89,12 @@ export async function POST(req: Request) {
   const clientState = new Map<string, ClientItemState>();
   for (const s of body.items ?? []) clientState.set(`${s.construct}::${s.evidence_span}`, s);
 
+  const coverage = fromJsonColumn<CoverageMap>(session.coverageJson, emptyCoverage());
+
   // ---- FR-17: block the write on any unresolved amber item ----------------------------
   const unresolved = stored.filter((item) => {
     if (item.somatic_only) return false;
+    if (coverage[item.construct as keyof CoverageMap] === "CONTESTED") return false;
     if (bandForConfidence(item.confidence) !== "medium") return false;
     const state = clientState.get(`${item.construct}::${item.evidence_span}`);
     return !(state?.confirmed || state?.disputed);
@@ -109,33 +113,30 @@ export async function POST(req: Request) {
   }
 
   // ---- score, deterministically -------------------------------------------------------
-  // §26.8: a construct she both affirmed and denied is CONTESTED. No score is written for it
-  // until a human resolves it with her, so it is excluded here rather than silently resolved.
-  const coverage = fromJsonColumn<CoverageMap>(session.coverageJson, emptyCoverage());
-  const contested = Object.entries(coverage)
-    .filter(([, state]) => state === "CONTESTED")
-    .map(([id]) => id);
+  // §26.8: a construct she both affirmed and denied is CONTESTED until the CHP picks which
+  // quote stands (or neither). That resolution is written into coverage before scoring, and
+  // only the standing quote is counted — never the whole construct dropped, never a silent pick.
+  const reviewed = prepareReviewScoring({
+    coverage,
+    stored,
+    clientItems: body.items ?? [],
+  });
 
-  const scored: ScoredItem[] = [];
-  for (const item of stored) {
-    if (!isConstructId(item.construct)) continue;
-    if (contested.includes(item.construct)) continue; // unresolved contradiction
-    if (item.somatic_only) continue; // never populates a construct (FR-12)
-    const band = bandForConfidence(item.confidence);
-    if (band === "low") continue; // was never populated; silence beats a guess
-    const state = clientState.get(`${item.construct}::${item.evidence_span}`);
-    scored.push({
-      construct: item.construct as ConstructId,
-      severity: item.severity_estimate,
-      // Green items need no action; amber items required an explicit per-item tap.
-      confirmedByChp: band === "high" ? true : state?.confirmed === true,
-      motherDisputed: state?.disputed === true,
-    });
+  if (reviewed.stillContested.length > 0) {
+    return NextResponse.json(
+      {
+        error: "contested_unresolved",
+        unresolvedCount: reviewed.stillContested.length,
+        messageSw: "Chagua nukuu inayosimama kwanza.",
+        messageEn: "Pick which quote stands first.",
+      },
+      { status: 409 },
+    );
   }
 
-  const scores = score(scored);
+  const scores = score(reviewed.scored);
 
-  const shortPathNegative = session.termination === "short_path_negative";
+  const shortPathNegative = isShortPathTermination(session.termination);
   const referral = routeReferral({
     scores,
     // Latched. Read from the session row, never re-derived from the item list (§11.8 rule 1).
@@ -150,12 +151,7 @@ export async function POST(req: Request) {
   const possibleUnderEndorsement = detectUnderEndorsement(stored, scores.phq9);
 
   // ---- generated surfaces, each denylisted (FR-24a) ------------------------------------
-  const quotes = dedupeQuotes(
-    stored
-      .filter((i) => !i.somatic_only && bandForConfidence(i.confidence) !== "low")
-      .filter((i) => !clientState.get(`${i.construct}::${i.evidence_span}`)?.disputed)
-      .map((i) => ({ construct: i.construct, span: i.evidence_span })),
-  );
+  const quotes = dedupeQuotes(reviewed.quoteSpans);
 
   const summaryInput = {
     quotes,
@@ -210,7 +206,7 @@ export async function POST(req: Request) {
       disclaimersJson: toJsonColumn([
         "not_a_diagnosis",
         "instrument_not_criterion_validated_in_swahili",
-        ...(contested.length > 0 ? ["unresolved_contradiction_excluded_from_score"] : []),
+        ...(reviewed.stillContested.length > 0 ? ["unresolved_contradiction_excluded_from_score"] : []),
         // On the record itself, so anyone reading it later knows the transcript still exists.
         ...(session.transcriptRetained ? ["transcript_retained_for_research_by_consent"] : []),
         ...(referral.incomplete ? ["incomplete_screen"] : []),
@@ -233,7 +229,11 @@ export async function POST(req: Request) {
 
   await prisma.session.update({
     where: { id: session.id },
-    data: { status: "completed", endedAt: new Date() },
+    data: {
+      status: "completed",
+      endedAt: new Date(),
+      coverageJson: toJsonColumn(reviewed.coverage),
+    },
   });
 
   await audit(
@@ -250,7 +250,8 @@ export async function POST(req: Request) {
     tier: referral.tier,
     ruleApplied: referral.ruleApplied,
     incomplete: referral.incomplete,
-    contestedCount: contested.length,
+    contestedCount: reviewed.stillContested.length,
+    resolvedContestedCount: reviewed.resolutions.length,
     backReadFellBack: backRead.fellBackToTemplate,
     handoverFellBack: handover.fellBackToTemplate,
   });
@@ -259,7 +260,7 @@ export async function POST(req: Request) {
     recordId: record.id,
     scores,
     referral,
-    contested,
+    contested: reviewed.stillContested,
     backRead: backRead.text,
     handoverEn,
     possibleUnderEndorsement,

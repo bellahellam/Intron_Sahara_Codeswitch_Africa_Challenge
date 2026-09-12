@@ -20,6 +20,7 @@ import {
 } from "@/lib/extraction/validate";
 import type { Extraction, ExtractionItem } from "@/lib/extraction/schema";
 import { bandForConfidence, emptyCoverage, updateCoverage } from "@/lib/clinical/coverage";
+import { prepareReviewScoring } from "@/lib/clinical/review";
 import { decide } from "@/lib/clinical/decide";
 import { score, type ScoredItem } from "@/lib/clinical/score";
 import { routeReferral } from "@/lib/clinical/route";
@@ -308,6 +309,42 @@ describe("§26.8 Ambiguous intent path (P1)", () => {
     });
     expect(d.action).toBe("PROBE");
     expect(d.targetConstruct).toBe("phq9_3");
+  });
+
+  it("the CHP picking which quote stands clears CONTESTED and scores only that quote", () => {
+    let coverage = updateCoverage(emptyCoverage(), {
+      items: [{ construct: "phq9_3", confidence: 0.9, somaticOnly: false }],
+      denied: [],
+    });
+    coverage = updateCoverage(coverage, { items: [], denied: ["phq9_3"] });
+    expect(coverage.phq9_3).toBe("CONTESTED");
+
+    const reviewed = prepareReviewScoring({
+      coverage,
+      stored: [
+        {
+          construct: "phq9_3",
+          evidence_span: "Silali kabisa",
+          severity_estimate: 3,
+          confidence: 0.9,
+          somatic_only: false,
+        },
+        {
+          construct: "phq9_3",
+          evidence_span: "nalala vizuri",
+          severity_estimate: 0,
+          confidence: 0.88,
+          somatic_only: false,
+        },
+      ],
+      clientItems: [
+        { construct: "phq9_3", evidence_span: "Silali kabisa", confirmed: true, disputed: false },
+        { construct: "phq9_3", evidence_span: "nalala vizuri", confirmed: false, disputed: true },
+      ],
+    });
+    expect(reviewed.coverage.phq9_3).toBe("COVERED_HIGH");
+    expect(reviewed.stillContested).toEqual([]);
+    expect(score(reviewed.scored).phq9).toBe(3);
   });
 });
 

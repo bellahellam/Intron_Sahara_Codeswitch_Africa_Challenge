@@ -172,6 +172,9 @@ export async function POST(req: Request) {
       escalated: session.escalated || escalating,
       escalatedAt: session.escalatedAt ?? (escalating ? new Date() : null),
       status: escalating ? "escalated" : session.status,
+      // Complete and back-read read this column to distinguish a deliberate short path from a
+      // truncated full screen. decide() sets it; without this write it is always null.
+      ...(outcome.decision.termination ? { termination: outcome.decision.termination } : {}),
     },
   });
 

@@ -49,14 +49,17 @@ export function EvidenceCard({
   // Low-confidence items are never shown, because they were never populated (§16.5).
   if (band === "low") return null;
 
-  const needsConfirm = band === "medium" && !item.confirmed;
+  // Parent passes onConfirm when a tap is required: amber items, or a contested quote the CHP
+  // must pick. High-confidence uncontested items omit it and need no action.
+  const awaitingChoice = Boolean(onConfirm) && !item.confirmed && !item.disputed;
+  const needsAmberOutline = band === "medium" && !item.confirmed && !item.disputed;
 
   return (
     <article
       className={[
         "animate-card-in card space-y-3 border-l-4 border-l-ochre",
         // Amber cards are the only cards with an outline — shape, not colour alone.
-        needsConfirm ? "border-2 border-warning" : "",
+        awaitingChoice || needsAmberOutline ? "border-2 border-warning" : "",
         item.disputed ? "opacity-50" : "",
       ].join(" ")}
     >
@@ -88,7 +91,7 @@ export function EvidenceCard({
         </p>
       ) : (
         <div className="flex flex-wrap gap-2">
-          {needsConfirm && onConfirm && (
+          {awaitingChoice && onConfirm && (
             // §11.9 layer 2: an explicit PER-ITEM tap. Bulk-confirm is deliberately not implemented.
             <button type="button" onClick={onConfirm} className="btn-quiet border-warning text-warning">
               ✓ {COPY.buttons.confirm.sw}
