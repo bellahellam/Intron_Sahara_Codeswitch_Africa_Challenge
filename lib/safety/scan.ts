@@ -130,6 +130,7 @@ function contentTokens(phrase: string): string[] {
 function matchEntry(
   entry: SafetyLexiconEntry,
   transcriptTokens: Array<{ token: string; start: number; end: number }>,
+  rawTranscript: string,
 ): SafetyHit | null {
   const needles = contentTokens(entry.phrase);
   if (needles.length === 0) return null;
@@ -167,6 +168,15 @@ function matchEntry(
   const windowSize = needles.length * 3 + 5;
   if (lastIndex - firstIndex > windowSize) return null;
 
+  // A lexicon entry is a PHRASE. Its tokens do not straddle a sentence boundary, and treating
+  // them as if they do produces spans like "nafikiria ... kujiua" lifted out of
+  // "nafikiria ingekuwa poa kama singekuwepo. Sio kwamba nataka kujiua" — two different clauses,
+  // one of which is a denial. The escalation itself is unaffected (the hedged and explicit
+  // entries both fire on their own); what this fixes is the QUOTE shown back to the CHP, which
+  // has to be something the mother actually said as one phrase.
+  const between = rawTranscript.slice(matchedPositions[0].start, matchedPositions[matchedPositions.length - 1].end);
+  if (matchedPositions.length > 1 && /[.!?]/.test(between)) return null;
+
   const start = matchedPositions[0].start;
   const end = matchedPositions[matchedPositions.length - 1].end;
 
@@ -193,7 +203,7 @@ export function safetyScan(rawTranscript: string, lexicon?: SafetyLexiconEntry[]
     const hits: SafetyHit[] = [];
 
     for (const entry of entries) {
-      const hit = matchEntry(entry, tokens);
+      const hit = matchEntry(entry, tokens, rawTranscript);
       if (hit) {
         hits.push({ ...hit, matchedText: rawTranscript.slice(hit.span.start, hit.span.end) });
       }

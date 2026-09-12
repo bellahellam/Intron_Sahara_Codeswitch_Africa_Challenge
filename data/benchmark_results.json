@@ -1,0 +1,23 @@
+{
+  "_status": "PLACEHOLDER — not yet run. §24.11 renders S10 from a committed CSV rather than wiring it to live benchmark output, and until `python -m bench.run` has actually produced results this file says so on screen rather than showing invented numbers.",
+  "generated_at": null,
+  "datasets": {
+    "A": { "name": "intronhealth/AfriSwitchCare", "config": "swahili", "split": "test", "n": "12 conversations, 1.54 h", "cmi": 37.4 },
+    "C": { "name": "First-party field set", "n": "28 utterances, ~18 min", "note": "the only set carrying risk utterances and hand-assigned gold scores" }
+  },
+  "table1": [],
+  "table2": [],
+  "table4": [],
+  "table5_not_benchmarked": [
+    { "model": "Deepgram", "reason": "Terms of Service restriction #9 prohibits use 'for competitive purposes, including model training, benchmarking and other competitive analysis.' Not conditioned on being a competitor. We will not publish numbers we are contractually barred from producing." },
+    { "model": "AssemblyAI", "reason": "Two clauses: prohibits 'competitive analysis or benchmarking', and separately prohibits submitting benchmarking material 'not independently created by the Customer', which directly implicates evaluating on a third-party corpus like AfriSwitchCare." },
+    { "model": "NVIDIA Parakeet / Canary", "reason": "Swahili is not supported by any checkpoint. Parakeet-v2 is English-only; Parakeet-v3 and Canary-1b-v2 cover 25 European languages; Canary-1b/flash/180m hardcode choices=['en','de','es','fr']. Reported as a negative finding, not a benchmark row." },
+    { "model": "w2v-BERT 2.0", "reason": "sw is in its 96-language pretraining set, but the card states it is 'a bare checkpoint without any modeling head, and thus requires finetuning.' Cannot be benchmarked zero-shot." }
+  ],
+  "baselines": [
+    { "source": "shamiriAI (Lilan, Mochama, Osborn et al. 2026, JMIR AI 5:e95063) — code-switched English/Kiswahili/Sheng mental health session audio", "result": "WER 0.34, CER 0.19, cosine semantic similarity 0.77", "note": "The only peer-reviewed quantified benchmark for exactly our setting. This is our realistic ceiling." },
+    { "source": "AfriSwitch, best system, code-switched Swahili", "result": "34.12% WER" },
+    { "source": "Intron MultiBench README, MONOLINGUAL accented clinical Swahili, Sahara", "result": "0.068 normalised WER, CER 0.028", "note": "Do NOT compare against this. The gap between 0.068 and 0.34 is the entire story of this competition." },
+    { "source": "Common Voice read-speech Swahili", "result": "3–16% WER" }
+  ]
+}

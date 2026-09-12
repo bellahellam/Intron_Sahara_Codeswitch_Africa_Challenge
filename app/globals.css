@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-neutral-50 text-neutral-900 font-sans antialiased;
+    /* §16.4 minimum 16 px body. Not negotiable: this is read on a phone, outdoors, by someone
+       who is also conducting a conversation. */
+    font-size: 16px;
+  }
+
+  /* §16.4: a timer that jitters as digits change looks broken, and scores must align in a list. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* §14.4 motor: >= 48 px targets, everywhere, with no exceptions for "small" controls. */
+  button,
+  a[role="button"],
+  [role="button"] {
+    min-height: 48px;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-neutral-50;
+  }
+}
+
+@layer components {
+  /* §16.5 component inventory. */
+  .btn-primary {
+    @apply w-full h-14 rounded-lg bg-primary text-white font-semibold text-base
+           active:bg-primary-light disabled:bg-neutral-200 disabled:text-neutral-500
+           transition-colors;
+  }
+
+  /* §16.5: "Never visually demoted below the destructive-but-correct choice."
+     `Amekataa` (she declined) must not look discouraged — it is frequently the right answer. */
+  .btn-secondary {
+    @apply w-full h-14 rounded-lg border-2 border-primary bg-transparent text-primary
+           font-semibold text-base active:bg-primary/5 transition-colors;
+  }
+
+  .btn-quiet {
+    @apply h-12 px-4 rounded-lg border border-neutral-200 bg-white text-neutral-700 font-medium;
+  }
+
+  .card {
+    @apply rounded-lg border border-neutral-200 bg-white p-4;
+  }
+
+  /* §16.2 principle 1, made typographic: her words are the hero. Nothing outranks them. */
+  .quote {
+    @apply text-quote text-neutral-900 border-l-4 border-ochre pl-3;
+  }
+
+  .gloss {
+    @apply text-gloss italic text-neutral-500;
+  }
+
+  /* Text whose job is to be read out loud. */
+  .aloud {
+    @apply text-aloud text-neutral-900;
+  }
+
+  .disclaimer {
+    @apply bg-neutral-200 text-neutral-700 text-sm px-4 py-3 rounded-md;
+  }
+}
+
+/* §16.6: everything honours prefers-reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

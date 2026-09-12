@@ -1,0 +1,237 @@
+"use client";
+
+/**
+ * S6 Kagua (Review & confirm) — §15.4.
+ *
+ * Two verifications, in order, and the order matters: human first, then the source.
+ *
+ *   Layer 2 (human): every amber item requires an explicit per-item tap. Bulk-confirm is
+ *   deliberately not implemented, and the primary action stays disabled until every amber item
+ *   is resolved. The server refuses the write too (FR-17), so this is not the only guard.
+ *
+ *   Layer 3 (source): the back-read, in her own words, read aloud to her BEFORE submission. She
+ *   is the ground truth for what she said and she gets the last word. `Amekanusha` is available
+ *   during the back-read, and her disagreement is recorded rather than silently discarded.
+ */
+
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { COPY } from "@/lib/copy";
+import { Header, PrimaryButton, ErrorCard } from "@/components/ui";
+import { EvidenceCard, type EvidenceItem } from "@/components/EvidenceCard";
+import { bandForConfidence } from "@/lib/clinical/coverage";
+
+type Stage = "confirm" | "backread";
+
+export default function Review({ params }: { params: { sessionId: string } }) {
+  const { sessionId } = params;
+  const router = useRouter();
+
+  const [items, setItems] = useState<EvidenceItem[]>([]);
+  const [stage, setStage] = useState<Stage>("confirm");
+  const [backRead, setBackRead] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<{ sw: string; en: string } | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/session/${sessionId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d) setItems(d.items ?? []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [sessionId]);
+
+  // Only items that were actually populated appear. Low-confidence ones were never populated,
+  // and somatic-only ones were capped below the threshold on purpose.
+  const visible = items.filter((i) => !i.somatic_only && bandForConfidence(i.confidence) !== "low");
+  const amber = visible.filter((i) => bandForConfidence(i.confidence) === "medium");
+  const unresolved = amber.filter((i) => !i.confirmed && !i.disputed);
+
+  function itemStates() {
+    return visible.map((i) => ({
+      construct: i.construct,
+      evidence_span: i.evidence_span,
+      confirmed: i.confirmed === true,
+      disputed: i.disputed === true,
+    }));
+  }
+
+  /** Stage 1 → 2. Generates the back-read. Persists NOTHING: she still gets the last word. */
+  async function toBackRead() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/backread", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, items: itemStates() }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError({
+          sw: body.messageSw ?? "Haikuwezekana kuandaa maandishi ya kusoma. Jaribu tena.",
+          en: body.messageEn ?? "Could not prepare the back-read. Try again.",
+        });
+        setBusy(false);
+        return;
+      }
+      const data = await res.json();
+      setBackRead(data.backRead);
+      setStage("backread");
+      setBusy(false);
+    } catch {
+      setError({ sw: COPY.states.failedNetwork.sw, en: COPY.states.failedNetwork.en });
+      setBusy(false);
+    }
+  }
+
+  /** Stage 2 → done. Only now is anything written, and only after she has heard it. */
+  async function submit() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, items: itemStates() }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError({
+          sw: body.messageSw ?? COPY.states.failedSave.sw,
+          en: body.messageEn ?? COPY.states.failedSave.en,
+        });
+        setBusy(false);
+        return;
+      }
+      const data = await res.json();
+      // §12.6 rule 1: the success screen is not reached until the write is confirmed.
+      router.push(`/matokeo/${data.recordId}`);
+    } catch {
+      setError({ sw: COPY.states.failedSave.sw, en: COPY.states.failedSave.en });
+      setBusy(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <main className="min-h-screen p-4">
+        <Header title="Kagua" />
+        <p className="px-0 text-neutral-500">Inapakia...</p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="flex min-h-screen flex-col pb-8">
+      <Header title="Kagua" back={`/mazungumzo/${sessionId}`} />
+
+      <div className="flex-1 space-y-4 px-4">
+        {stage === "confirm" ? (
+          <>
+            {visible.length === 0 ? (
+              <p className="text-neutral-700">
+                Hakuna kilichopatikana katika mazungumzo haya.
+                <span className="gloss block not-italic">
+                  Nothing was evidenced in this conversation. The record will say so plainly.
+                </span>
+              </p>
+            ) : (
+              <>
+                {unresolved.length > 0 && (
+                  <div className="rounded-md border border-warning bg-white px-3 py-2 text-sm">
+                    <p className="font-medium text-warning">
+                      ! {COPY.states.confirming.sw} ({unresolved.length})
+                    </p>
+                    <p className="gloss not-italic">{COPY.states.confirming.en}</p>
+                  </div>
+                )}
+
+                <section className="space-y-3">
+                  {visible.map((item, i) => (
+                    <EvidenceCard
+                      key={`${item.construct}-${i}`}
+                      item={item}
+                      onConfirm={
+                        bandForConfidence(item.confidence) === "medium"
+                          ? () =>
+                              setItems((prev) =>
+                                prev.map((it) =>
+                                  it === item ? { ...it, confirmed: true, disputed: false } : it,
+                                ),
+                              )
+                          : undefined
+                      }
+                      onDispute={() =>
+                        setItems((prev) =>
+                          prev.map((it) => (it === item ? { ...it, disputed: true, confirmed: false } : it)),
+                        )
+                      }
+                    />
+                  ))}
+                </section>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <section className="card space-y-3">
+              <p className="text-xs uppercase tracking-wide text-neutral-500">
+                Soma kwa sauti kwa mama <span className="gloss normal-case">(read aloud to the mother)</span>
+              </p>
+              {/* Largest text on the screen. It exists to be spoken. */}
+              <p className="aloud">{backRead}</p>
+            </section>
+
+            <p className="text-sm text-neutral-700">
+              Akikanusha jambo lolote, bofya <strong>{COPY.buttons.disputed.sw}</strong> kwenye kadi husika.
+              <span className="gloss block not-italic">
+                If she disagrees with anything, tap {COPY.buttons.disputed.en} on that card. Her
+                disagreement is recorded.
+              </span>
+            </p>
+
+            <section className="space-y-3">
+              {visible.map((item, i) => (
+                <EvidenceCard
+                  key={`br-${item.construct}-${i}`}
+                  item={item}
+                  onDispute={() =>
+                    setItems((prev) =>
+                      prev.map((it) => (it === item ? { ...it, disputed: true } : it)),
+                    )
+                  }
+                />
+              ))}
+            </section>
+          </>
+        )}
+
+        {error && <ErrorCard sw={error.sw} en={error.en} />}
+      </div>
+
+      <div className="px-4 pt-6">
+        {stage === "confirm" ? (
+          <PrimaryButton
+            onClick={toBackRead}
+            disabled={unresolved.length > 0 || busy}
+            disabledReason={
+              unresolved.length > 0 ? COPY.disabledReasons.amberPending.sw : undefined
+            }
+          >
+            {busy ? "Inaandaa..." : COPY.buttons.confirmAndRead.sw}
+          </PrimaryButton>
+        ) : (
+          <PrimaryButton onClick={submit} disabled={busy}>
+            {busy ? "Inahifadhi..." : COPY.buttons.sendReferral.sw}
+          </PrimaryButton>
+        )}
+      </div>
+    </main>
+  );
+}

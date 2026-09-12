@@ -5,7 +5,7 @@
  * promise ("the mother never repeats herself", §14.2) all live here, in the caller.
  */
 
-import { MockASRAdapter } from "./mock";
+import { MockASRAdapter, FIXTURE_UTTERANCES as FIXTURES } from "./mock";
 import { SaharaAdapter } from "./sahara";
 import { ASRError, type ASRAdapter, type TranscribeOptions, type TranscribeResult } from "./types";
 
@@ -16,8 +16,12 @@ export { MockASRAdapter, FIXTURE_UTTERANCES } from "./mock";
 export function getASRAdapter(): ASRAdapter {
   const provider = (process.env.ASR_PROVIDER ?? "sahara").toLowerCase();
   switch (provider) {
-    case "mock":
-      return new MockASRAdapter();
+    case "mock": {
+      // ASR_MOCK_FIXTURE selects one of the §5.3 reference utterances, so the acceptance
+      // scenarios in §26 can be walked through the real UI without spending Sahara credits.
+      const key = process.env.ASR_MOCK_FIXTURE as keyof typeof FIXTURES | undefined;
+      return new MockASRAdapter(key && FIXTURES[key] ? { transcripts: [FIXTURES[key]] } : {});
+    }
     case "sahara":
     default:
       return new SaharaAdapter({
