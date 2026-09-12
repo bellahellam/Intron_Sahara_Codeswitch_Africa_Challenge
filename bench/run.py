@@ -65,6 +65,18 @@ def run_model(model_key: str, samples, out_dir: Path, limit: int | None, chunk_s
     paced = model_key.startswith("sahara")
     last_call = 0.0
 
+    # Write incrementally. A 50-minute run that dies on the last conversation must not lose the
+    # 11 that succeeded — which is exactly what happened the first time this was run, when the
+    # Sahara balance was exhausted partway through.
+    fieldnames = [
+        "sample_id", "model", "hypothesis", "reference", "reference_tagged", "duration_s",
+        "gold_cmi", "gold_switch_points", "chunks", "chunks_failed", "errors",
+        "latency_ms_total", "latency_ms_mean_per_chunk",
+    ]
+    handle = out_path.open("w", encoding="utf-8", newline="")
+    writer = csv.DictWriter(handle, fieldnames=fieldnames)
+    writer.writeheader()
+
     rows = []
     for sample_idx, sample in enumerate(samples):
         if limit is not None and sample_idx >= limit:
@@ -90,7 +102,16 @@ def run_model(model_key: str, samples, out_dir: Path, limit: int | None, chunk_s
                 # string would be scored as a perfect deletion and flatter the model.
                 kind = getattr(exc, "kind", type(exc).__name__)
                 errors.append(f"chunk{chunk_idx}:{kind}")
-                print(f"    ! chunk {chunk_idx} failed: {kind}: {str(exc)[:120]}")
+                print(f"    ! chunk {chunk_idx} failed: {kind}: {str(exc)[:140]}")
+                if kind == "quota":
+                    # Stop immediately. Continuing produces a CSV full of empty hypotheses that
+                    # look like catastrophic deletions, which is worse than an incomplete run.
+                    handle.close()
+                    raise SystemExit(
+                        "\n  ABORTED: the Sahara balance is exhausted.\n"
+                        f"  Partial results for {len(rows)} conversation(s) are in {out_path}.\n"
+                        "  Top up the account, then re-run. Nothing already transcribed is lost."
+                    )
             finally:
                 last_call = time.perf_counter()
 
@@ -118,6 +139,8 @@ def run_model(model_key: str, samples, out_dir: Path, limit: int | None, chunk_s
                 "latency_ms_mean_per_chunk": round(sum(latencies) / len(latencies)) if latencies else "",
             }
         )
+        writer.writerow(rows[-1])
+        handle.flush()
         done = len(rows)
         print(
             f"  [{adapter.name}] {sample.sample_id[:22]:22} done "
@@ -125,11 +148,7 @@ def run_model(model_key: str, samples, out_dir: Path, limit: int | None, chunk_s
             f"{len(hypothesis)} chars, {len(errors)} failed chunks" + " " * 20
         )
 
-    with out_path.open("w", encoding="utf-8", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
-        writer.writeheader()
-        writer.writerows(rows)
-
+    handle.close()
     print(f"  wrote {out_path.relative_to(ROOT)}")
     return out_path
 

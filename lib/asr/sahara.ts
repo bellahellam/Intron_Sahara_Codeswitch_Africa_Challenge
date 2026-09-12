@@ -111,7 +111,19 @@ function fileIdOf(payload: unknown): string | null {
 
 function classify(status: number, bodyText: string): ASRError["kind"] {
   const upper = bodyText.toUpperCase();
-  if (upper.includes("QUOTA_EXCEEDED") || upper.includes("INSUFFICIENT_CREDIT")) return "quota";
+  // OBSERVED LIVE on 12 Sep 2026, and not what the docs led us to expect: running out of credit
+  // returns HTTP 400 with {"message":"insufficient balance to process the file"} — not 402, not
+  // 429, and not the documented QUOTA_EXCEEDED token. Classified as "unknown" it produced the
+  // generic fallback message, when FR-31 requires every error to name what failed and what to do.
+  // A CHP told "the service did not respond, try again" will keep retrying against a dead balance.
+  if (
+    upper.includes("QUOTA_EXCEEDED") ||
+    upper.includes("INSUFFICIENT_CREDIT") ||
+    upper.includes("INSUFFICIENT BALANCE") ||
+    upper.includes("INSUFFICIENT_BALANCE")
+  ) {
+    return "quota";
+  }
   if (upper.includes("INSUFFICIENT_AUDIO_ACTIVITY")) return "insufficient_audio";
   if (status === 401 || status === 403) return "auth";
   if (status === 429) return "rate_limit";

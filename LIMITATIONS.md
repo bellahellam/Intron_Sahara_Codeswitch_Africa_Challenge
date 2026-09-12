@@ -7,6 +7,40 @@ a gap we can name, not a surprise we are hoping nobody finds.
 
 ---
 
+## 0. BLOCKING RIGHT NOW
+
+### 🔴 The Sahara API balance is exhausted
+
+As of 12 September 2026 the account returns:
+
+```
+HTTP 400  {"data":{},"message":"insufficient balance to process the file","status":"Error"}
+```
+
+**Nothing that needs transcription works until this is topped up** — not the product, not the
+benchmark, not the demo recording.
+
+§24.2 named this as "the highest-risk external unknown on the board" and said the participant
+allowance is published nowhere. It was consumed by the first full benchmark run: 12 conversations
+of 6–11 minutes, chunked at 75 s, across two Sahara configurations.
+
+Two things were fixed in response, because both were real defects the exhaustion exposed:
+
+1. **The error was not being named.** The classifier looked for `QUOTA_EXCEEDED` and
+   `INSUFFICIENT_CREDIT` — the documented tokens — and the live API says `insufficient balance` at
+   HTTP 400. It fell through to the generic "the service did not respond, try again", which would
+   have a CHP retrying against a dead balance. FR-31 requires every error to name what failed and
+   what to do; it now says *"Salio la huduma limeisha. Wasiliana na msimamizi."*
+2. **The benchmark runner lost a 50-minute run.** It wrote its CSV only after all 12 conversations
+   completed, so exhausting the balance partway through discarded everything. It now writes
+   incrementally and aborts immediately on a quota error rather than filling a file with empty
+   hypotheses that would score as catastrophic deletions.
+
+⚠️ **Check the balance before recording the demo.** Running out mid-take is a recoverable annoyance
+if a known-good run is already saved and an unrecoverable one if it is not.
+
+---
+
 ## 1. Things that are not yet true
 
 ### ⬜ The safety lexicon has not been reviewed by a clinician
@@ -44,11 +78,24 @@ API returns `calibrated: false`, and the UI says the threshold has not been meas
 threshold that happens to look plausible would be worse than an absent one, because it cannot be
 argued with.
 
-### ⬜ The benchmark has not been run
+### ⬜ The benchmark has not produced final numbers
 
-`data/benchmark_results.json` is a placeholder. The in-product "Kwa nini Sahara?" page (S10) says
-so on screen and shows **no numbers**, rather than a plausible-looking table. Published baselines
+The harness is **built and validated** — `bench/` runs end to end, and a single-conversation smoke
+run produced WER 0.172, CER 0.120 and **EESR 63.9%** (meaning 36% of embedded English spans were
+lost on that conversation). The full run was stopped when the Sahara balance was exhausted.
+
+`data/benchmark_results.json` therefore still has no final table, and the in-product S10 page says
+so on screen and shows **no numbers** rather than a plausible-looking table. Published baselines
 from the literature are shown and labelled as such.
+
+To finish: top up Sahara, then
+
+```
+python -m bench.run --models sahara-off,sahara-on
+python -m bench.report
+```
+
+Expect roughly 30 minutes per configuration.
 
 ---
 
