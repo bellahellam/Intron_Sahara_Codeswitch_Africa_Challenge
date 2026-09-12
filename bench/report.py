@@ -142,6 +142,23 @@ def write_csv(path: Path, rows: list[dict]) -> None:
         writer.writerows(rows)
 
 
+# A rate computed over a handful of instances is not a rate. AfriSwitchCare carries almost no
+# clinical-idiom or safety content — CIR and SPR come out of it with denominators of 1 — and
+# printing "100%" against n=1 would be the single most misleading number this harness could emit.
+# Below this, report the raw count instead (spec section 18.5a).
+MIN_REPORTABLE_DENOMINATOR = 10
+
+
+def fmt_rate(value, denominator, dash: str = "—") -> str:
+    """Percentages only where the denominator can carry one; otherwise the bare count."""
+    if value is None or value == "" or not denominator:
+        return dash
+    if int(denominator) < MIN_REPORTABLE_DENOMINATOR:
+        recalled = round(float(value) * int(denominator))
+        return f"{recalled}/{denominator}"
+    return f"{float(value) * 100:.1f}%"
+
+
 def fmt(value, pct: bool = False, dash: str = "—") -> str:
     """`dash` is overridable because Windows consoles default to cp1252 and cannot print an
     em-dash; the markdown report still gets the proper character."""
@@ -213,9 +230,11 @@ def main() -> None:
     print(f"\n{'model':28} {'WER':>7} {'CER':>7} {'EESR':>8} {'EESR-cl':>8} {'CIR':>7} {'CMI-d':>7} {'p95 ms':>8}")
     for s in summary:
         print(
-            f"{s['model'][:28]:28} {fmt(s['wer']):>7} {fmt(s['cer']):>7} "
-            f"{fmt(s['eesr'], True):>8} {fmt(s['eesr_clinical'], True):>8} "
-            f"{fmt(s['cir'], True):>7} {fmt(s['cmi_delta']):>7} {fmt(s['latency_ms_p95_per_chunk']):>8}"
+            f"{s['model'][:28]:28} {fmt(s['wer'], dash='-'):>7} {fmt(s['cer'], dash='-'):>7} "
+            f"{fmt_rate(s['eesr'], s['en_spans_total'], dash='-'):>8} "
+            f"{fmt_rate(s['eesr_clinical'], s['eesr_clinical_total'], dash='-'):>8} "
+            f"{fmt_rate(s['cir'], s['cir_total'], dash='-'):>7} "
+            f"{fmt(s['cmi_delta'], dash='-'):>7} {fmt(s['latency_ms_p95_per_chunk'], dash='-'):>8}"
         )
 
     out_md = ROOT / args.out_dir / "BENCHMARK.md"
@@ -278,13 +297,22 @@ def render_markdown(summary: list[dict], per_sample: list[dict]) -> str:
     for s in summary:
         add(
             f"| `{s['model']}` | {fmt(s['wer'])} | {fmt(s['cer'])} | "
-            f"{fmt(s['eesr'], True)} | {fmt(s['eesr_clinical'], True)} | {fmt(s['cir'], True)} | "
+            f"{fmt_rate(s['eesr'], s['en_spans_total'])} | "
+            f"{fmt_rate(s['eesr_clinical'], s['eesr_clinical_total'])} | "
+            f"{fmt_rate(s['cir'], s['cir_total'])} | "
             f"{fmt(s['cmi_delta'])} | {fmt(s['latency_ms_p95_per_chunk'])} ms | {s['chunks_failed']} |"
         )
     add("")
     add(f"EESR is computed over {summary[0]['en_spans_total'] if summary else 0} embedded-English spans")
     add(f"and EESR-clinical over the {summary[0]['eesr_clinical_total'] if summary else 0} of those")
     add("containing an affective term.")
+    add("")
+    add("**CIR and SPR are shown as raw counts, not percentages, and they are not results.** This")
+    add(f"corpus contains {summary[0]['cir_total'] if summary else 0} instance(s) of any documented")
+    add(f"idiom and {summary[0]['spr_total'] if summary else 0} of any safety phrase across all 12")
+    add("conversations — simulated consultations for physical conditions simply do not contain the")
+    add("distress vocabulary this product exists to catch. A rate over n=1 is not a rate. Both")
+    add("metrics need field set C, which is written to carry them deliberately.")
     add("")
     add("## What EESR measures, and why WER alone is misleading")
     add("")
