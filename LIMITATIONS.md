@@ -192,6 +192,21 @@ because it processes synthetic and team-recorded audio exclusively, never real p
 The consent script version moved to `v2`. Records written under `v1` were consented under wording
 that didn't mention retention, and their transcripts were purged.
 
+### Audio retention (FR-23, M18) was never built, and the checkbox that implied it has been removed
+
+FR-23 and M18 both call for audio deleted by default with per-session opt-in retention, the same
+shape as the transcript retention above. **The opt-in half was never built.** `session.audioRetained`
+was a stored boolean that nothing ever read, and no code path wrote audio to disk regardless of it.
+Audio is never written at all, matching RESPONSIBLE-AI.md §7's stronger, unconditional guarantee.
+
+The consent screen's `Hifadhi sauti` checkbox asked a mother for a choice the system couldn't honor
+either way, so it's been removed rather than fixed. We're not building the opt-in later either.
+RESPONSIBLE-AI.md §7 makes the case: this build has no IRB approval and no legal basis to hold
+identifiable health audio past the request, and "audio is never written" is a guarantee simple
+enough to verify by reading the code. A conditional one depends on every future contributor
+remembering the condition. FR-23 and M18 are met in the stricter direction the spec allowed
+(always deleted), not the opt-in-retained one.
+
 ### No real patient audio, ever, in this build
 
 Digital Health Act 2023 s.47 restricts offshore transfer of personal health information, and we
