@@ -46,16 +46,14 @@ export const COPY = {
     startListening: { sw: "Anza kusikiliza", en: "Start listening" },
     endVisit: { sw: "Maliza ziara", en: "End the visit" },
     stop: { sw: "Simamisha", en: "Stop" },
-    ask: { sw: "Uliza", en: "Ask" },
-    skip: { sw: "Ruka", en: "Skip" },
     correct: { sw: "Sahihisha", en: "Correct" },
     disputed: { sw: "Amekanusha", en: "She disagrees" },
     riskFlag: { sw: "Alama ya hatari", en: "Raise risk flag" },
-    finish: { sw: "Maliza", en: "Finish" },
     confirm: { sw: "Thibitisha", en: "Confirm" },
     neither: { sw: "Hakuna", en: "Neither" },
     confirmAndRead: { sw: "Thibitisha na soma kwa mama", en: "Confirm and read to the mother" },
     sendReferral: { sw: "Tuma rufaa", en: "Send referral" },
+    sendReferralAnyway: { sw: "Tuma rufaa mwenyewe", en: "Send referral yourself" },
     copy: { sw: "Nakili", en: "Copy" },
     share: { sw: "Shiriki", en: "Share" },
     spokenWithHer: { sw: "Nimeongea naye", en: "I have spoken with her" },
@@ -65,6 +63,8 @@ export const COPY = {
     anonymous: { sw: "Bila jina", en: "Anonymous" },
     whySahara: { sw: "Kwa nini Sahara?", en: "Why Sahara?" },
   },
+
+  followUpVisit: { sw: "Ziara ya kufuatilia", en: "Follow-up visit" },
 
   /** §9.2 step 4. Four short sentences, by design: a long script is a script that gets skipped. */
   consentScript: {
@@ -100,6 +100,13 @@ export const COPY = {
   openingQuestion: {
     sw: "Tangu ujifungue, umekuwa ukijisikiaje? Niambie tu vile mambo yamekuwa.",
     en: "Since you gave birth, how have you been feeling? Just tell me how things have been.",
+  },
+
+  /** The whisper slot in the capture dock (§16.2): a suggestion, never a blocking card. */
+  probeHint: { sw: "Bofya ukiuliza", en: "Tap when you ask it" },
+  noMoreQuestions: {
+    sw: "Hakuna swali lingine. Endelea kuongea naye kama unataka.",
+    en: "No more questions. Keep talking with her if you want.",
   },
 
   /** §15.6, shown in context at the first record tap — never at launch. */
@@ -178,6 +185,9 @@ export const COPY = {
       en: "Service balance exhausted. Contact your supervisor.",
     },
     lowLevel: { sw: "Sauti iko chini. Sogeza simu karibu.", en: "The level is low. Move the phone closer." },
+    /** The compact session-bar badge. Short by necessity of space; the full phrase is the
+     *  button's aria-label, not this visible text. */
+    riskBadge: { sw: "HATARI", en: "RISK" },
   },
 
   emptyStates: {

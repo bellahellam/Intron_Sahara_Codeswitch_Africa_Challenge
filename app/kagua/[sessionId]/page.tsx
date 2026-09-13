@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { COPY } from "@/lib/copy";
 import { Header, PrimaryButton, ErrorCard } from "@/components/ui";
+import { StepIndicator } from "@/components/StepIndicator";
 import { EvidenceCard, type EvidenceItem } from "@/components/EvidenceCard";
 import {
   bandForConfidence,
@@ -177,8 +178,9 @@ export default function Review({ params }: { params: Promise<{ sessionId: string
   return (
     <main className="flex min-h-screen flex-col pb-8">
       <Header title="Kagua" back={`/mazungumzo/${sessionId}`} />
+      <StepIndicator current={1} />
 
-      <div className="flex-1 space-y-4 px-4">
+      <div className="flex-1 space-y-4 px-4 pt-4">
         {stage === "confirm" ? (
           <>
             {visible.length === 0 ? (

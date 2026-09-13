@@ -57,6 +57,7 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
     text: COPY.openingQuestion.sw,
     fixed: true,
   });
+  const [screeningComplete, setScreeningComplete] = useState(false);
   const [escalation, setEscalation] = useState<EscalationTrigger | null>(null);
   const [error, setError] = useState<{ sw: string; en: string } | null>(null);
   const [pending, setPending] = useState(0);
@@ -117,8 +118,12 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
           return;
         }
 
-        if (data.decision.action === "COMPLETE") setProbe(null);
-        else if (data.probe) setProbe({ text: data.probe.text, fixed: data.probe.fixed });
+        if (data.decision.action === "COMPLETE") {
+          setProbe(null);
+          setScreeningComplete(true);
+        } else if (data.probe) {
+          setProbe({ text: data.probe.text, fixed: data.probe.fixed });
+        }
       } catch {
         setError({ sw: COPY.states.failedNetwork.sw, en: COPY.states.failedNetwork.en });
       }
@@ -187,7 +192,39 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
         />
       )}
 
-      <Header title="Mazungumzo" />
+      {recorder.recording ? (
+        // The persistent session bar (§16.2). It says this is one continuous recording spanning
+        // the whole visit, not a recording per question — and it carries the risk flag, always
+        // one tap away, so it never has to compete with `Maliza ziara` at the bottom.
+        <div style={{
+          display:"flex", alignItems:"center", gap:10, minHeight:56, padding:"0 14px",
+          background:"linear-gradient(105deg,#5B21B6 0%,#7C3AED 54%,#C026D3 100%)", color:"#fff", flexShrink:0,
+        }}>
+          <span aria-hidden className="animate-pulse-halo" style={{ display:"inline-block", width:9, height:9, borderRadius:"50%", background:"#fff" }} />
+          <span style={{ font:"600 12px Inter, system-ui, sans-serif" }}>Ziara inaendelea</span>
+          <span className="tabular" style={{ font:"700 14px Inter, system-ui, sans-serif", marginLeft:2 }}>
+            {formatElapsed(recorder.elapsedMs)}
+          </span>
+          <button
+            type="button"
+            onClick={raiseManualFlag}
+            aria-label={COPY.buttons.riskFlag.sw}
+            style={{
+              marginLeft:"auto", display:"inline-flex", alignItems:"center", gap:5,
+              padding:"6px 10px", borderRadius:7, border:"1px solid rgba(255,255,255,.5)",
+              background:"transparent", color:"#fff",
+              font:"700 10px Inter, system-ui, sans-serif", letterSpacing:".04em", cursor:"pointer",
+            }}
+          >
+            <svg viewBox="0 0 14 14" fill="none" style={{ width:12, height:12 }} aria-hidden>
+              <path d="M7 2l5.5 10H1.5L7 2zM7 5.5v3.2m0 1.6v.3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {COPY.states.riskBadge.sw}
+          </button>
+        </div>
+      ) : (
+        <Header title="Mazungumzo" />
+      )}
 
       {!online && (
         <div className="mx-4 rounded-md border-2 border-warning bg-white px-3 py-2 text-sm">
@@ -217,32 +254,6 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
             sw="Sehemu moja haikueleweka. Endelea kuongea naye — utaweza kuiandika baadaye."
             en="One part could not be understood. Keep talking with her; you can enter it later."
           />
-        )}
-
-        {/* The probe. A suggestion, with Uliza and Ruka at equal weight. Tapping Uliza tells the
-            recorder the CHP is about to speak, so that window is labelled rather than guessed. */}
-        {probe && (
-          <section className="rounded-lg border border-ochre/40 bg-ochre/10 p-4 space-y-3">
-            <p className="text-xs uppercase tracking-wide text-ochre">
-              Pendekezo la swali <span className="gloss normal-case">(suggested question)</span>
-            </p>
-            <p className="aloud">{probe.text}</p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className="btn-quiet flex-1"
-                onClick={() => {
-                  recorder.markSpeaking();
-                  setProbe(null);
-                }}
-              >
-                {COPY.buttons.ask.sw}
-              </button>
-              <button type="button" className="btn-quiet flex-1" onClick={() => setProbe(null)}>
-                {COPY.buttons.skip.sw}
-              </button>
-            </div>
-          </section>
         )}
 
         {error && <ErrorCard sw={error.sw} en={error.en} />}
@@ -305,20 +316,10 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
           busy={pending > 0}
           onStart={() => (micPrompt ? recorder.start() : setMicPrompt(true))}
           onStop={finish}
+          probe={probe}
+          screeningComplete={screeningComplete}
+          onProbeTap={() => recorder.markSpeaking()}
         />
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={raiseManualFlag}
-            className="h-12 flex-1 rounded-lg border-2 border-danger font-medium text-danger"
-          >
-            {COPY.buttons.riskFlag.sw}
-          </button>
-          <button type="button" onClick={finish} className="btn-quiet flex-1">
-            {COPY.buttons.finish.sw}
-          </button>
-        </div>
       </div>
     </main>
   );

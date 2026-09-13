@@ -4,6 +4,7 @@ import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { COPY } from "@/lib/copy";
 import { Header } from "@/components/ui";
+import { StepIndicator } from "@/components/StepIndicator";
 
 interface RecordData {
   motherName: string;
@@ -80,6 +81,7 @@ export default function Handover({ params }: { params: Promise<{ recordId: strin
   return (
     <main style={{ display:"flex", flexDirection:"column", minHeight:"100%", paddingBottom:32 }}>
       <Header title="Rufaa" />
+      <StepIndicator current={3} />
 
       <div style={{ flex:1, padding:"16px 20px 0", display:"flex", flexDirection:"column", gap:14 }}>
 

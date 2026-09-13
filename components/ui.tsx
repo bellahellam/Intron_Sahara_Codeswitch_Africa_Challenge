@@ -148,9 +148,18 @@ export function AmplitudeMeter({ level, lowHint }: { level: number; lowHint: boo
  */
 export function ListeningControl({
   recording, voiceActive, level, elapsed, lowLevel, busy, onStart, onStop,
+  probe, screeningComplete, onProbeTap,
 }: {
   recording: boolean; voiceActive: boolean; level: number; elapsed: string;
   lowLevel: boolean; busy: boolean; onStart: () => void; onStop: () => void;
+  /** The whisper slot: a suggested question, or null while none is pending. */
+  probe?: { text: string } | null;
+  /** True once decide() has returned COMPLETE. The slot then shows a neutral message instead
+   *  of vanishing, so its absence reads as finished, not broken. */
+  screeningComplete?: boolean;
+  /** Marks the segment as containing CHP speech (§11.3a). Never clears the probe — it stays
+   *  until the next question replaces it, because there is nothing here for her to dismiss. */
+  onProbeTap?: () => void;
 }) {
   if (!recording) {
     return (
@@ -204,6 +213,38 @@ export function ListeningControl({
 
       {/* Work in flight is shown as reassurance, never as a number or a spinner she must wait on. */}
       {busy && <p style={{ margin:0, fontSize:14, color:"#64747B" }}>{COPY.states.working.sw}</p>}
+
+      {/* The whisper slot. A suggestion, never a blocking card: no buttons, nothing to dismiss.
+          Tapping it marks the segment as CHP speech and otherwise changes nothing on screen. */}
+      {probe ? (
+        <button
+          type="button"
+          onClick={onProbeTap}
+          style={{
+            display:"flex", gap:9, alignItems:"flex-start", textAlign:"left",
+            padding:"9px 11px", borderRadius:9,
+            background:"#FDF8F2", border:"none", borderLeft:"3px solid #D9B98E",
+            cursor:"pointer",
+          }}
+        >
+          <span aria-hidden style={{ width:6, height:6, borderRadius:"50%", background:"#A8652A", marginTop:6, flexShrink:0 }} />
+          <span style={{ minWidth:0 }}>
+            <span style={{ display:"block", fontStyle:"italic", fontSize:14, lineHeight:1.5, color:"#8C521F" }}>{probe.text}</span>
+            <span style={{ display:"block", marginTop:3, fontSize:10, letterSpacing:".04em", color:"#B09272" }}>
+              {COPY.probeHint.sw} · <span className="gloss">{COPY.probeHint.en}</span>
+            </span>
+          </span>
+        </button>
+      ) : screeningComplete ? (
+        <div style={{
+          display:"flex", gap:9, alignItems:"flex-start",
+          padding:"9px 11px", borderRadius:9,
+          background:"#F7F5FF", borderLeft:"3px solid #DCD2EE",
+        }}>
+          <span aria-hidden style={{ width:6, height:6, borderRadius:"50%", background:"#BCB0D4", marginTop:6, flexShrink:0 }} />
+          <p style={{ margin:0, fontStyle:"italic", fontSize:14, lineHeight:1.5, color:"#7D7691" }}>{COPY.noMoreQuestions.sw}</p>
+        </div>
+      ) : null}
 
       <button type="button" onClick={onStop} className="btn-primary">
         {COPY.buttons.endVisit.sw}

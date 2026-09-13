@@ -3,23 +3,27 @@
 /**
  * S7 Matokeo (Result & referral) — §15.4.
  *
- * Tell Grace what happened and what happens next.
+ * Risk level leads, scores follow (§16.5's "band in words, never a bare number first" applied one
+ * level up): the tier is what Grace acts on, so it is the first thing on the screen, not the last.
+ * `Tuma rufaa` only appears for a tier that actually needs a facility referral — showing it
+ * unconditionally would let her send a referral a CHP-followup screen never asked for.
  *
- * Band in WORDS, never a bare number first (§16.5). Both disclaimers verbatim. The second one —
- * that the instrument has not been criterion-validated in Kiswahili — is unusual to put on a
- * result screen, and it is there because Larsen 2023 shows instrument choice moves measured
- * prevalence fourfold in the same Kenyan women. Saying so here is the honest thing and the
- * impressive thing.
+ * Both disclaimers verbatim. The second one — that the instrument has not been criterion-validated
+ * in Kiswahili — is unusual to put on a result screen, and it is there because Larsen 2023 shows
+ * instrument choice moves measured prevalence fourfold in the same Kenyan women. Saying so here is
+ * the honest thing and the impressive thing.
  */
 
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { COPY } from "@/lib/copy";
-import { BandChip, DisclaimerStrip, Header, PrimaryButton } from "@/components/ui";
+import { DisclaimerStrip, Header, PrimaryButton } from "@/components/ui";
+import { StepIndicator } from "@/components/StepIndicator";
 import { GAD7_BAND_LABELS_SW, PHQ9_BAND_LABELS_SW, type Gad7Band, type Phq9Band } from "@/lib/clinical/score";
 import { TIER_LABELS_SW, type ReferralTier } from "@/lib/clinical/route";
 
 interface RecordData {
+  createdAt: string;
   scores: {
     phq2: number;
     phq9: number;
@@ -33,6 +37,8 @@ interface RecordData {
   risk: { flagged: boolean };
   disclaimers: string[];
 }
+
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 
 export default function Result({ params }: { params: Promise<{ recordId: string }> }) {
   // Next 16 delivers route params as a Promise; `use` unwraps it in a client component.
@@ -62,38 +68,48 @@ export default function Result({ params }: { params: Promise<{ recordId: string 
   }
 
   const { scores, referral } = data;
+  const needsReferral = referral.tier !== "chp_followup";
 
-  const tierConfig: Record<string, { color: string; bg: string; bar: string }> = {
-    facility_urgent:  { color: "text-danger",  bg: "border-danger/30 bg-danger/5", bar: "bg-danger"  },
-    facility_routine: { color: "text-warning", bg: "border-warning/30 bg-warning/5", bar: "bg-warning" },
-    chp_followup:     { color: "text-primary", bg: "border-primary/30 bg-primary/5", bar: "bg-primary" },
+  const tierConfig: Record<string, { color: string; bg: string; bar: string; cardBg: string; cardBorder: string }> = {
+    facility_urgent:  { color: "text-danger",  bg: "border-danger/30 bg-danger/5",   bar: "bg-danger",  cardBg: "bg-danger/5",   cardBorder: "border-danger/40" },
+    facility_routine: { color: "text-warning", bg: "border-warning/30 bg-warning/5", bar: "bg-warning", cardBg: "bg-warning/5",  cardBorder: "border-warning/40" },
+    // A CHP-followup tier is the reassuring outcome: no facility referral today. Green, matching
+    // how the rest of the product signals "nothing further required" (e.g. the completed banner).
+    chp_followup:     { color: "text-success", bg: "border-success/30 bg-success/5", bar: "bg-success", cardBg: "bg-success/5", cardBorder: "border-success/40" },
   };
   const tier = tierConfig[referral.tier] ?? tierConfig.chp_followup;
+
+  const followUpDate = new Date(new Date(data.createdAt).getTime() + FOURTEEN_DAYS_MS)
+    .toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
   return (
     <main className="flex min-h-full flex-col pb-8">
       <Header title="Matokeo" />
+      <StepIndicator current={2} skipStep3={!needsReferral} />
 
-      <div className="flex-1 space-y-4 px-4 pt-2">
-        {data.risk.flagged && (
-          <div className="flex items-start gap-3 rounded-xl border-2 border-danger/40
-                          bg-danger/5 p-4">
-            <svg viewBox="0 0 20 20" fill="none" className="mt-0.5 h-5 w-5 shrink-0 text-danger" aria-hidden>
-              <path d="M10 3l7 13H3L10 3zM10 7v4m0 2v.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <div>
-              <p className="font-bold text-danger">Alama ya hatari ilitolewa katika kikao hiki.</p>
-              <p className="text-xs text-neutral-500 mt-0.5 italic">
+      <div className="flex-1 space-y-4 px-4 pt-4">
+        {/* Risk level leads. */}
+        <section className={`card space-y-1 border-2 ${tier.cardBg} ${tier.cardBorder}`}>
+          <p className={`section-label ${tier.color}`}>Kiwango cha hatari</p>
+          <p className={`text-2xl font-bold tracking-tight ${tier.color}`}>
+            {TIER_LABELS_SW[referral.tier]}
+          </p>
+          <p className="text-sm text-neutral-700">{referral.reasonSw}</p>
+          <p className="gloss">{referral.reason}</p>
+
+          {data.risk.flagged && (
+            <p className="mt-1 flex items-start gap-2 text-xs font-medium text-danger">
+              <span aria-hidden>!</span>
+              Alama ya hatari ilitolewa katika kikao hiki.
+              <span className="gloss not-italic font-normal">
                 A safety escalation occurred. This cannot be lowered by any later edit.
-              </p>
-            </div>
-          </div>
-        )}
+              </span>
+            </p>
+          )}
+        </section>
 
         {/* Scores */}
         <section className="card space-y-3">
-          <p className="section-label">Matokeo ya uchunguzi</p>
-
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: "PHQ-9", band: PHQ9_BAND_LABELS_SW[scores.phq9Band], total: scores.phq9 },
@@ -126,33 +142,38 @@ export default function Result({ params }: { params: Promise<{ recordId: string 
           )}
         </section>
 
-        {/* Referral */}
-        <section className={`card space-y-2 border ${tier.bg}`}>
-          <div className="flex items-center gap-3">
-            <span className={`h-9 w-1 rounded-full ${tier.bar}`} aria-hidden />
+        {/* CHP-followup: nothing to send today, but she still gets a date and a way home. */}
+        {!needsReferral && (
+          <section className="card flex items-center justify-between gap-3">
             <div>
-              <p className="section-label">Rufaa</p>
-              <p className={`text-lg font-bold ${tier.color}`}>
-                {TIER_LABELS_SW[referral.tier]}
-              </p>
+              <p className="text-sm font-semibold text-neutral-900">{COPY.followUpVisit.sw}</p>
+              <p className="gloss">{COPY.followUpVisit.en}</p>
             </div>
-          </div>
-          <p className="text-sm text-neutral-700">{referral.reasonSw}</p>
-          <p className="text-xs italic text-neutral-400">{referral.reason}</p>
-        </section>
+            <span className="tabular text-sm font-bold text-primary">{followUpDate}</span>
+          </section>
+        )}
 
         <DisclaimerStrip withValidation />
       </div>
 
-      <div className="px-4 pt-4">
-        <PrimaryButton onClick={() => router.push(`/rufaa/${recordId}`)}>
-          <span className="flex items-center justify-center gap-2">
-            {COPY.buttons.sendReferral.sw}
-            <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4" aria-hidden>
-              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-        </PrimaryButton>
+      <div className="space-y-2 px-4 pt-4">
+        {needsReferral ? (
+          <PrimaryButton onClick={() => router.push(`/rufaa/${recordId}`)}>
+            <span className="flex items-center justify-center gap-2">
+              {COPY.buttons.sendReferral.sw}
+              <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4" aria-hidden>
+                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </PrimaryButton>
+        ) : (
+          <>
+            <PrimaryButton onClick={() => router.push("/")}>{COPY.buttons.home.sw}</PrimaryButton>
+            <button type="button" onClick={() => router.push(`/rufaa/${recordId}`)} className="btn-quiet w-full">
+              {COPY.buttons.sendReferralAnyway.sw}
+            </button>
+          </>
+        )}
       </div>
     </main>
   );
