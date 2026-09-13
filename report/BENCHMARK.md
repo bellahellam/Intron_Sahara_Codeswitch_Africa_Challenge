@@ -43,6 +43,7 @@ Two properties of this data, both verified rather than taken from the card:
 
 | Model | WER ↓ | CER ↓ | **EESR ↑** | **EESR-clinical ↑** | CIR ↑ | CMI-Δ ↓ | p95 latency/chunk | Failed chunks |
 |---|---|---|---|---|---|---|---|---|
+| `jacaranda-asr-stt` | 0.565 | 0.395 | 35.5% | 20.0% | 1/1 | 13.242 | 24612 ms | 0 |
 | `whisper-large-v3-auto` | 0.332 | 0.149 | 82.5% | 93.3% | 1/1 | 3.368 | 42894 ms | 0 |
 | `whisper-large-v3-sw` | 0.344 | 0.160 | 81.0% | 93.3% | 1/1 | 5.813 | 24976 ms | 0 |
 
@@ -114,28 +115,40 @@ against the monolingual number.
 
 | Conversation | Model | WER | EESR | EESR-clinical | CIR |
 |---|---|---|---|---|---|
+| Acute Appendicitis | `jacaranda-asr-stt` | 0.529 | 50.0% | — | — |
 | Acute Appendicitis | `whisper-large-v3-auto` | 0.218 | 86.1% | — | — |
 | Acute Appendicitis | `whisper-large-v3-sw` | 0.277 | 83.3% | — | — |
+| Asthma | `jacaranda-asr-stt` | 0.577 | 30.8% | — | — |
 | Asthma | `whisper-large-v3-auto` | 0.293 | 82.0% | — | — |
 | Asthma | `whisper-large-v3-sw` | 0.293 | 82.0% | — | — |
+| Bronchopneumonia | `jacaranda-asr-stt` | 0.552 | 38.5% | — | — |
 | Bronchopneumonia | `whisper-large-v3-auto` | 0.417 | 65.4% | — | — |
 | Bronchopneumonia | `whisper-large-v3-sw` | 0.370 | 69.2% | — | — |
+| Depression | `jacaranda-asr-stt` | 0.624 | 33.9% | 50.0% | 100.0% |
 | Depression | `whisper-large-v3-auto` | 0.308 | 83.9% | 100.0% | 100.0% |
 | Depression | `whisper-large-v3-sw` | 0.337 | 79.0% | 100.0% | 100.0% |
+| Diabetes Mellitus | `jacaranda-asr-stt` | 0.565 | 28.6% | 0.0% | — |
 | Diabetes Mellitus | `whisper-large-v3-auto` | 0.443 | 81.0% | 100.0% | — |
 | Diabetes Mellitus | `whisper-large-v3-sw` | 0.449 | 81.0% | 100.0% | — |
+| Drug-induced Psychosis | `jacaranda-asr-stt` | 0.583 | 39.2% | 0.0% | — |
 | Drug-induced Psychosis | `whisper-large-v3-auto` | 0.371 | 91.1% | 100.0% | — |
 | Drug-induced Psychosis | `whisper-large-v3-sw` | 0.399 | 91.1% | 100.0% | — |
+| Febrile Convulsion | `jacaranda-asr-stt` | 0.634 | 35.9% | — | — |
 | Febrile Convulsion | `whisper-large-v3-auto` | 0.424 | 80.2% | — | — |
 | Febrile Convulsion | `whisper-large-v3-sw` | 0.479 | 75.5% | — | — |
+| Hypertension | `jacaranda-asr-stt` | 0.562 | 12.5% | 0.0% | — |
 | Hypertension | `whisper-large-v3-auto` | 0.329 | 81.2% | 50.0% | — |
 | Hypertension | `whisper-large-v3-sw` | 0.317 | 81.2% | 50.0% | — |
+| Osteoarthritis | `jacaranda-asr-stt` | 0.639 | 19.4% | — | — |
 | Osteoarthritis | `whisper-large-v3-auto` | 0.316 | 83.9% | — | — |
 | Osteoarthritis | `whisper-large-v3-sw` | 0.316 | 83.9% | — | — |
+| PID | `jacaranda-asr-stt` | 0.423 | 50.0% | 0.0% | — |
 | PID | `whisper-large-v3-auto` | 0.258 | 88.3% | 100.0% | — |
 | PID | `whisper-large-v3-sw` | 0.279 | 86.7% | 100.0% | — |
+| Stroke | `jacaranda-asr-stt` | 0.605 | 31.1% | — | — |
 | Stroke | `whisper-large-v3-auto` | 0.341 | 77.8% | — | — |
 | Stroke | `whisper-large-v3-sw` | 0.341 | 77.8% | — | — |
+| Tuberculosis | `jacaranda-asr-stt` | 0.485 | 40.6% | 0.0% | — |
 | Tuberculosis | `whisper-large-v3-auto` | 0.261 | 87.5% | 100.0% | — |
 | Tuberculosis | `whisper-large-v3-sw` | 0.274 | 84.4% | 100.0% | — |
 

@@ -17,6 +17,21 @@
   },
   "table1": [
     {
+      "model": "jacaranda-asr-stt",
+      "wer": 0.5648,
+      "cer": 0.3951,
+      "eesr": 0.3555,
+      "eesr_clinical": 0.2,
+      "eesr_clinical_total": 15,
+      "cir": 1.0,
+      "cir_total": 1,
+      "spr": 1.0,
+      "spr_total": 1,
+      "cmi_delta": 13.2425,
+      "latency_ms_p95_per_chunk": 24612,
+      "n": 12
+    },
+    {
       "model": "whisper-large-v3-auto",
       "wer": 0.3316,
       "cer": 0.1487,
