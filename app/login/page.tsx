@@ -27,7 +27,13 @@ function LoginForm() {
   const [submitting, setSubmitting] = useState(false);
 
   const next = searchParams.get("next");
-  const destination = next?.startsWith("/") && !next.startsWith("//") ? next : role === "admin" ? "/admin" : "/";
+  // "/" is never a real destination for an admin — it's just where an unauthenticated visit to
+  // the home page bounced from (proxy.ts appends next=/ for exactly that case). Anything more
+  // specific in `next` (e.g. a deep link) is still honoured.
+  const destination =
+    next?.startsWith("/") && !next.startsWith("//") && !(role === "admin" && next === "/")
+      ? next
+      : role === "admin" ? "/admin" : "/";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

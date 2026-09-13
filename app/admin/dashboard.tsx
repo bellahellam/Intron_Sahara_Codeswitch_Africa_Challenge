@@ -14,13 +14,29 @@
  */
 
 import type { AdminOverview } from "@/lib/admin/get-admin-data";
+import { BarList, StatTile } from "@/components/charts";
 
 export function AdminDashboard({ data }: { data: AdminOverview }) {
   const { config, canaries } = data;
   const liveTranscripts = data.turns.filter((t) => !t.transcriptPurged);
 
+  const tierCounts = { facility_urgent: 0, facility_routine: 0, chp_followup: 0 } as Record<string, number>;
+  for (const r of data.records) tierCounts[r.referral.tier ?? ""] = (tierCounts[r.referral.tier ?? ""] ?? 0) + 1;
+  const escalatedSessions = data.sessions.filter((s) => s.escalated).length;
+
   return (
     <div className="space-y-6">
+      {/* ---- At a glance: what state is the whole pipeline in, right now. ---- */}
+      <section className="space-y-2">
+        <p className="text-label m-0">At a glance</p>
+        <div className="grid grid-cols-2 gap-2">
+          <StatTile label="Sessions" value={data.sessions.length} />
+          <StatTile label="Escalated" value={escalatedSessions} status={escalatedSessions > 0 ? "critical" : "neutral"} />
+          <StatTile label="Facility referrals" value={tierCounts.facility_urgent + tierCounts.facility_routine} status="warning" />
+          <StatTile label="CHP follow-up only" value={tierCounts.chp_followup} status="good" />
+        </div>
+      </section>
+
       {/* ---- Canaries first. These are what fail silently if nobody counts. ---- */}
       <section className="space-y-2">
         <p className="text-label m-0">Pipeline canaries</p>
@@ -29,12 +45,12 @@ export function AdminDashboard({ data }: { data: AdminOverview }) {
           things she did not say fails silently unless someone is counting.
         </p>
         <div className="grid grid-cols-2 gap-2">
-          <Stat label="Hallucinated spans dropped" value={canaries.spanValidationFailures} danger />
-          <Stat label="CHP's own words suppressed" value={canaries.knownPromptSuppressed} />
-          <Stat label="Somatic backstop fired" value={canaries.somaticBackstopFired} />
-          <Stat label="Extraction failed" value={canaries.extractionFailed} />
-          <Stat label="Safety escalations" value={canaries.safetyHits} danger />
-          <Stat label="Consent gate rejections" value={canaries.consentGateRejections} />
+          <StatTile label="Hallucinated spans dropped" value={canaries.spanValidationFailures} status={canaries.spanValidationFailures > 0 ? "critical" : "neutral"} />
+          <StatTile label="CHP's own words suppressed" value={canaries.knownPromptSuppressed} />
+          <StatTile label="Somatic backstop fired" value={canaries.somaticBackstopFired} />
+          <StatTile label="Extraction failed" value={canaries.extractionFailed} status={canaries.extractionFailed > 0 ? "warning" : "neutral"} />
+          <StatTile label="Safety escalations" value={canaries.safetyHits} status={canaries.safetyHits > 0 ? "critical" : "neutral"} />
+          <StatTile label="Consent gate rejections" value={canaries.consentGateRejections} />
         </div>
       </section>
 
@@ -212,15 +228,12 @@ export function AdminDashboard({ data }: { data: AdminOverview }) {
           Records what happened, never what she said. No transcript, quote, name or age enters an
           audit payload — <code>audit()</code> throws if one does.
         </p>
-        <div className="card space-y-1 text-xs">
-          {Object.entries(data.auditByKind)
-            .sort((a, b) => b[1] - a[1])
-            .map(([kind, count]) => (
-              <div key={kind} className="flex justify-between">
-                <span>{kind}</span>
-                <span className="tabular font-medium">{count}</span>
-              </div>
-            ))}
+        <div className="card">
+          <BarList
+            items={Object.entries(data.auditByKind)
+              .sort((a, b) => b[1] - a[1])
+              .map(([kind, count]) => ({ label: kind, value: count }))}
+          />
         </div>
       </section>
 
@@ -244,17 +257,6 @@ export function AdminDashboard({ data }: { data: AdminOverview }) {
           </div>
         </section>
       )}
-    </div>
-  );
-}
-
-function Stat({ label, value, danger }: { label: string; value: number; danger?: boolean }) {
-  return (
-    <div className="card">
-      <p className={`tabular text-2xl font-semibold ${danger && value > 0 ? "text-danger" : "text-neutral-900"}`}>
-        {value}
-      </p>
-      <p className="text-xs text-neutral-700">{label}</p>
     </div>
   );
 }
