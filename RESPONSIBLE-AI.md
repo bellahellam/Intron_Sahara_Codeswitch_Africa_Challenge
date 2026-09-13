@@ -132,6 +132,18 @@ written in the first place. It lives only as a request-scoped memory buffer and 
 request ends. That's a stronger guarantee than "we delete it later," because there's no cleanup
 step that could fail to run.
 
+An earlier version of the consent screen had a "Hifadhi sauti" (retain audio) checkbox. We removed
+it, and we're stating why rather than quietly dropping a feature. It asked for something the system
+could not do: audio is never written regardless of that checkbox, so checking it made a promise the
+backend couldn't keep. The alternative was building real audio storage behind it, and we rejected
+that too. Raw audio of a maternal mental health disclosure, including a possible disclosure of
+suicidal thoughts, is about the most sensitive recording this system could hold. This build has no
+IRB approval, no legal basis under Kenya's Digital Health Act to retain identifiable health audio
+past the request, and none of the storage, encryption, or deletion-lifecycle work that holding it
+responsibly would require. The absolute version of this guarantee, that audio is simply never
+written, is also the only version simple enough to verify by reading the code. A conditional
+guarantee is a promise that depends on every future contributor remembering the condition.
+
 Transcripts are purged once a screening session completes. What remains permanently is the
 structured record: scores, the specific quotes the CHP confirmed, and the referral decision. Never
 stored, anywhere: GPS, phone number, national ID, or any household identifier.

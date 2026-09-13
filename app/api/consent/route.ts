@@ -19,7 +19,6 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as {
     sessionId?: string;
     granted?: boolean;
-    audioRetentionOptIn?: boolean;
     /** A SEPARATE consent point with its own script (§19.8). Never inferred from the main grant. */
     transcriptRetentionOptIn?: boolean;
   } | null;
@@ -62,14 +61,12 @@ export async function POST(req: Request) {
       consentGranted: true,
       consentAt: new Date(),
       scriptVersion: CONSENT_SCRIPT_VERSION,
-      audioRetained: body.audioRetentionOptIn === true,
       transcriptRetained: body.transcriptRetentionOptIn === true,
     },
   });
 
   await audit(session.id, "consent_granted", {
     scriptVersion: CONSENT_SCRIPT_VERSION,
-    audioRetained: body.audioRetentionOptIn === true,
     transcriptRetained: body.transcriptRetentionOptIn === true,
   });
 

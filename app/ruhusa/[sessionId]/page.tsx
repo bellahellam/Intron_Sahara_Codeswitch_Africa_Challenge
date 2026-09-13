@@ -9,7 +9,6 @@ export default function Consent({ params }: { params: Promise<{ sessionId: strin
   const resolvedParams = use(params);
   const sessionId = resolvedParams.sessionId;
   const router = useRouter();
-  const [retainAudio, setRetainAudio] = useState(false);
   const [busy, setBusy] = useState<"agree" | "decline" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,10 +20,7 @@ export default function Consent({ params }: { params: Promise<{ sessionId: strin
       const res = await fetch("/api/consent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId, granted,
-          audioRetentionOptIn: granted ? retainAudio : false,
-        }),
+        body: JSON.stringify({ sessionId, granted }),
       });
       if (!res.ok) { setError("Hakuna mtandao. Jaribu tena."); setBusy(null); return; }
       router.push(granted ? `/mazungumzo/${sessionId}` : "/imekamilika?reason=declined");
@@ -84,29 +80,6 @@ export default function Consent({ params }: { params: Promise<{ sessionId: strin
             </div>
           ))}
         </div>
-
-        {/* ── Optional: retain audio ────────────────────────────────── */}
-        <label style={{
-          display:"flex", alignItems:"flex-start", gap:12,
-          padding:"14px 16px", borderRadius:14,
-          border:"1px solid #E5E7EB", background:"#FAFAFA",
-          cursor:"pointer",
-        }}>
-          <input
-            type="checkbox"
-            checked={retainAudio}
-            onChange={e => setRetainAudio(e.target.checked)}
-            style={{ marginTop:2, flexShrink:0 }}
-          />
-          <div>
-            <p style={{ fontSize:14, fontWeight:600, color:"#111827", margin:"0 0 2px" }}>
-              Hifadhi sauti <span style={{ fontWeight:400, color:"#9CA3AF", fontSize:13 }}>(si lazima)</span>
-            </p>
-            <p style={{ fontSize:12, color:"#6B7280", margin:0, lineHeight:1.5 }}>
-              Kawaida sauti hufutwa mara moja. Ukichagua hii, itahifadhiwa kwa kikao hiki pekee.
-            </p>
-          </div>
-        </label>
 
         {error && (
           <p style={{ fontSize:13, color:"#DC2626", textAlign:"center" }}>{error}</p>

@@ -53,12 +53,10 @@ model Session {
   consentGranted Boolean   @default(false)
   consentAt      DateTime?
   scriptVersion  String?
-  audioRetained  Boolean   @default(false)
 
-  // SEPARATE from audioRetained, and separately consented to. Keeping the transcript for demo and
-  // research changes who sees her words, so it is its own question with its own script — bundling
-  // it into the main consent would make the main consent untrue (see lib/copy.ts
-  // researchConsentScript). Default false; withdrawal still destroys everything.
+  // Its own consent point, with its own script. Keeping the transcript for demo and research
+  // changes who sees her words, so it is a separate question, not bundled into the main consent
+  // (see lib/copy.ts researchConsentScript). Default false; withdrawal still destroys everything.
   transcriptRetained Boolean @default(false)
 
   languageProfileJson String? // { sw, en, sheng, unknown }
