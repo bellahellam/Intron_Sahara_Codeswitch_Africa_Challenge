@@ -1,10 +1,40 @@
 sample_id,model,duration_s,ref_chars,hyp_chars,chunks_failed,wer,cer,en_spans_total,en_spans_recalled,eesr,eesr_clinical_total,eesr_clinical_recalled,eesr_clinical,cir_total,cir,cir_missed,spr_total,spr,spr_missed,gold_cmi,hyp_cmi,cmi_delta,latency_ms_mean_per_chunk,missed_clinical_spans
-Acute Appendicitis,elevenlabs-scribe-v2,389.27,3951,4074,0,0.1231,0.0622,36,31,0.8611,0,0,,0,,,0,,,20.260000228881836,30.44,10.18,5631,
-Asthma,elevenlabs-scribe-v2,409.75,3441,3527,0,0.1331,0.0539,39,34,0.8718,0,0,,0,,,0,,,48.630001068115234,43.11,5.52,6324,
-Acute Appendicitis,jacaranda-asr-stt,389.27,3951,2807,0,0.521,0.3826,36,18,0.5,0,0,,0,,,0,,,20.260000228881836,43.51,23.25,72393,
-Asthma,jacaranda-asr-stt,409.75,3441,2279,0,0.574,0.3982,39,12,0.3077,0,0,,0,,,0,,,48.630001068115234,23.27,25.36,69207,
-Acute Appendicitis,sahara-v2.5-corr-off,389.27,3951,3740,0,0.1719,0.1199,36,23,0.6389,0,0,,0,,,0,,,20.260000228881836,28.3,8.04,7514,
-Asthma,sahara-v2.5-corr-off,409.75,3441,3286,0,0.1448,0.0774,39,30,0.7692,0,0,,0,,,0,,,48.630001068115234,43.06,5.57,5499,
+Acute Appendicitis,elevenlabs-scribe-v2,389.27,3951,4109,0,0.134,0.0669,36,31,0.8611,0,0,,0,,,0,,,20.260000228881836,30.33,10.07,6350,
+Asthma,elevenlabs-scribe-v2,409.75,3441,3533,0,0.1314,0.0533,39,34,0.8718,0,0,,0,,,0,,,48.630001068115234,43.11,5.52,6386,
+Bronchopneumonia,elevenlabs-scribe-v2,439.68,3640,3847,0,0.1798,0.0903,52,42,0.8077,0,0,,0,,,0,,,45.470001220703125,49.2,3.73,6742,
+Depression,elevenlabs-scribe-v2,445.57,4073,4259,0,0.1566,0.0729,62,57,0.9194,6,6,1.0,1,1.0,,1,1.0,,47.029998779296875,49.0,1.97,6252,
+Diabetes Mellitus,elevenlabs-scribe-v2,468.39,4445,4756,0,0.2306,0.0972,42,35,0.8333,2,0,0.0,0,,,0,,,29.18000030517578,28.99,0.19,7848,low abdominal pains? | low abdominal pains.
+Drug-induced Psychosis,elevenlabs-scribe-v2,628.37,5409,5838,0,0.1956,0.1022,79,76,0.962,3,3,1.0,0,,,0,,,45.630001068115234,48.6,2.97,6763,
+Febrile Convulsion,elevenlabs-scribe-v2,685.55,6640,6967,0,0.2359,0.0919,106,92,0.8679,0,0,,0,,,0,,,37.16999816894531,33.62,3.55,7253,
+Hypertension,elevenlabs-scribe-v2,377.56,3576,3746,0,0.1537,0.074,32,31,0.9688,2,1,0.5,0,,,0,,,38.7599983215332,46.58,7.82,6525,"Have you recently been in a stressful envirnoment? I can't say I have been in a stressful environment, and I haven't been experiencing stressful events. And how about your salt consumption? Do you take a lot of salt with your food? Not that much."
+Osteoarthritis,elevenlabs-scribe-v2,385.15,3312,3361,0,0.1804,0.059,31,28,0.9032,0,0,,0,,,0,,,36.75,32.81,3.94,6920,
+PID,elevenlabs-scribe-v2,516.29,4791,4998,0,0.1457,0.0697,60,55,0.9167,1,1,1.0,0,,,0,,,24.520000457763672,32.38,7.86,6333,
+Stroke,elevenlabs-scribe-v2,358.53,3132,3225,0,0.1869,0.0676,45,36,0.8,0,0,,0,,,0,,,46.18000030517578,46.01,0.17,6336,
+Tuberculosis,elevenlabs-scribe-v2,435.48,3769,3899,0,0.119,0.061,32,32,1.0,1,1,1.0,0,,,0,,,29.190000534057617,37.25,8.06,5797,
+Acute Appendicitis,jacaranda-asr-stt,389.27,3951,2807,0,0.521,0.3826,36,18,0.5,0,0,,0,,,0,,,20.260000228881836,43.51,23.25,54171,
+Asthma,jacaranda-asr-stt,409.75,3441,2279,0,0.574,0.3982,39,12,0.3077,0,0,,0,,,0,,,48.630001068115234,23.27,25.36,48582,
+Bronchopneumonia,jacaranda-asr-stt,439.68,3640,2671,0,0.5519,0.4003,52,20,0.3846,0,0,,0,,,0,,,45.470001220703125,48.79,3.32,56460,
+Depression,jacaranda-asr-stt,445.57,4073,2595,0,0.6238,0.4406,62,21,0.3387,6,3,0.5,1,1.0,,1,1.0,,47.029998779296875,30.73,16.3,49165,"what about other people being around? Do you like other people being around? No, I prefer being alone. I'm also interested in regards to your sleep. | issues with sleep? | you describe your mood"
+Diabetes Mellitus,jacaranda-asr-stt,468.39,4445,3439,0,0.5634,0.3211,42,12,0.2857,2,0,0.0,0,,,0,,,29.18000030517578,17.2,11.98,57989,low abdominal pains? | low abdominal pains.
+Drug-induced Psychosis,jacaranda-asr-stt,628.37,5409,3997,0,0.5836,0.3917,79,31,0.3924,3,0,0.0,0,,,0,,,45.630001068115234,37.66,7.97,60890,"And how have you been sleeping? My sleep, | I don't sleep well. | your mental state, is that okay? It is fine.Okay, thank you. How are you feeling today? I'm fine. How would you describe your mood? Mood"
+Febrile Convulsion,jacaranda-asr-stt,685.55,6640,4949,0,0.6372,0.4054,106,38,0.3585,0,0,,0,,,0,,,37.16999816894531,32.23,4.94,62310,
+Hypertension,jacaranda-asr-stt,377.56,3576,2442,0,0.5669,0.4045,32,4,0.125,2,0,0.0,0,,,0,,,38.7599983215332,43.17,4.41,50564,"and what else do you feel? I have also been having issues with my sleep. I barely sleep these days. And are you sometimes aware of your own heartbeat? I can feel my own heartbeat, ocassionally. | Have you recently been in a stressful envirnoment? I can't say I have been in a stressful environment, and I haven't been experiencing stressful events. And how about your salt consumption? Do you take a lot of salt with your food? Not that much."
+Osteoarthritis,jacaranda-asr-stt,385.15,3312,2016,0,0.6411,0.4353,31,6,0.1935,0,0,,0,,,0,,,36.75,18.13,18.62,50370,
+PID,jacaranda-asr-stt,516.29,4791,3881,0,0.4243,0.2908,60,30,0.5,1,0,0.0,0,,,0,,,24.520000457763672,37.29,12.77,56802,"I feel like I have exhausted everything that I've been having. Okay. That is good. Well, I would like you to do some few investigations and you come back to me afterwards. I feel like you need to do some few blood investigations and we may take in some swab for culture so that we see how we may help you. And depending on the outcomes, we may also do an ultrasound. Is that fine with you? Anything to get some help,"
+Stroke,jacaranda-asr-stt,358.53,3132,1823,0,0.605,0.4598,45,14,0.3111,0,0,,0,,,0,,,46.18000030517578,32.35,13.83,42982,
+Tuberculosis,jacaranda-asr-stt,435.48,3769,2591,0,0.4848,0.3833,32,13,0.4062,1,0,0.0,0,,,0,,,29.190000534057617,44.31,15.12,45059,"so there’s no constant place that I live, but I live alone. You travel for work? Yes, I travel for work reasons. Do you take alcohol? Not as often. I only take alcohol during social events. And do you smoke? I do smoke. How many cigarettes do you smoke in a day, if you can make an estimation? Roughly"
+Acute Appendicitis,sahara-v2.5-corr-off,389.27,3951,3740,0,0.1719,0.1199,36,23,0.6389,0,0,,0,,,0,,,20.260000228881836,28.3,8.04,7389,
+Asthma,sahara-v2.5-corr-off,409.75,3441,3286,0,0.1448,0.0774,39,30,0.7692,0,0,,0,,,0,,,48.630001068115234,43.06,5.57,5359,
+Bronchopneumonia,sahara-v2.5-corr-off,439.68,3640,3634,0,0.1938,0.1017,52,45,0.8654,0,0,,0,,,0,,,45.470001220703125,47.87,2.4,5632,
+Depression,sahara-v2.5-corr-off,445.57,4073,3852,0,0.2238,0.1205,62,50,0.8065,6,6,1.0,1,1.0,,1,1.0,,47.029998779296875,46.04,0.99,5765,
+Diabetes Mellitus,sahara-v2.5-corr-off,468.39,4445,4319,0,0.206,0.1184,42,35,0.8333,2,0,0.0,0,,,0,,,29.18000030517578,27.26,1.92,5598,low abdominal pains? | low abdominal pains.
+Drug-induced Psychosis,sahara-v2.5-corr-off,628.37,5409,5082,0,0.2387,0.1464,79,58,0.7342,3,2,0.6667,0,,,0,,,45.630001068115234,49.1,3.47,7644,"your mental state, is that okay? It is fine.Okay, thank you. How are you feeling today? I'm fine. How would you describe your mood? Mood"
+Febrile Convulsion,sahara-v2.5-corr-off,685.55,6640,6039,0,0.2788,0.1494,106,78,0.7358,0,0,,0,,,0,,,37.16999816894531,31.8,5.37,6743,
+Hypertension,sahara-v2.5-corr-off,377.56,3576,3442,0,0.2083,0.1161,32,23,0.7188,2,1,0.5,0,,,0,,,38.7599983215332,47.5,8.74,5088,"Have you recently been in a stressful envirnoment? I can't say I have been in a stressful environment, and I haven't been experiencing stressful events. And how about your salt consumption? Do you take a lot of salt with your food? Not that much."
+Osteoarthritis,sahara-v2.5-corr-off,385.15,3312,3122,0,0.1732,0.0817,31,23,0.7419,0,0,,0,,,0,,,36.75,31.87,4.88,7016,
+PID,sahara-v2.5-corr-off,516.29,4791,4485,0,0.1815,0.1003,60,44,0.7333,1,1,1.0,0,,,0,,,24.520000457763672,33.13,8.61,5968,
+Stroke,sahara-v2.5-corr-off,358.53,3132,2987,0,0.1811,0.0934,45,39,0.8667,0,0,,0,,,0,,,46.18000030517578,45.75,0.43,5625,
+Tuberculosis,sahara-v2.5-corr-off,435.48,3769,3747,0,0.1219,0.0635,32,28,0.875,1,1,1.0,0,,,0,,,29.190000534057617,37.85,8.66,5634,
 Acute Appendicitis,whisper-large-v3-auto,389.27,3951,4102,0,0.2179,0.1196,36,31,0.8611,0,0,,0,,,0,,,20.260000228881836,28.61,8.35,12910,
 Asthma,whisper-large-v3-auto,409.75,3441,3471,0,0.2928,0.0952,39,32,0.8205,0,0,,0,,,0,,,48.630001068115234,42.77,5.86,12082,
 Bronchopneumonia,whisper-large-v3-auto,439.68,3640,3732,0,0.4171,0.1843,52,34,0.6538,0,0,,0,,,0,,,45.470001220703125,44.67,0.8,20326,
@@ -17,5 +47,5 @@ Osteoarthritis,whisper-large-v3-auto,385.15,3312,3301,0,0.3161,0.1146,31,26,0.83
 PID,whisper-large-v3-auto,516.29,4791,4606,0,0.2578,0.1501,60,53,0.8833,1,1,1.0,0,,,0,,,24.520000457763672,31.88,7.36,38021,
 Stroke,whisper-large-v3-auto,358.53,3132,3154,0,0.341,0.1471,45,35,0.7778,0,0,,0,,,0,,,46.18000030517578,48.15,1.97,23596,
 Tuberculosis,whisper-large-v3-auto,435.48,3769,3900,0,0.2612,0.1382,32,28,0.875,1,1,1.0,0,,,0,,,29.190000534057617,35.18,5.99,42894,
-Acute Appendicitis,whisper-large-v3-sw,389.27,3951,3963,0,0.2558,0.1521,36,30,0.8333,0,0,,0,,,0,,,20.260000228881836,35.07,14.81,97298,
-Asthma,whisper-large-v3-sw,409.75,3441,3474,0,0.2945,0.1093,39,29,0.7436,0,0,,0,,,0,,,48.630001068115234,42.05,6.58,69468,
+Acute Appendicitis,whisper-large-v3-sw,389.27,3951,4075,0,0.2842,0.1665,36,30,0.8333,0,0,,0,,,0,,,20.260000228881836,34.32,14.06,149686,
+Asthma,whisper-large-v3-sw,409.75,3441,3474,0,0.2945,0.1093,39,29,0.7436,0,0,,0,,,0,,,48.630001068115234,42.05,6.58,248466,

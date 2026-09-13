@@ -43,19 +43,19 @@ Two properties of this data, both verified rather than taken from the card:
 
 | Model | WER ↓ | CER ↓ | **EESR ↑** | **EESR-clinical ↑** | CIR ↑ | CMI-Δ ↓ | p95 latency/chunk | Failed chunks |
 |---|---|---|---|---|---|---|---|---|
-| `elevenlabs-scribe-v2` | 0.128 | 0.058 | 86.7% | — | — | 7.850 | 5631 ms | 0 |
-| `jacaranda-asr-stt` | 0.547 | 0.390 | 40.0% | — | — | 24.305 | 69207 ms | 0 |
-| `sahara-v2.5-corr-off` | 0.158 | 0.099 | 70.7% | — | — | 6.805 | 5499 ms | 0 |
+| `elevenlabs-scribe-v2` | 0.171 | 0.075 | 89.1% | 80.0% | 1/1 | 4.654 | 7253 ms | 0 |
+| `jacaranda-asr-stt` | 0.565 | 0.393 | 35.5% | 20.0% | 1/1 | 13.156 | 60890 ms | 0 |
+| `sahara-v2.5-corr-off` | 0.194 | 0.107 | 77.3% | 73.3% | 1/1 | 4.923 | 7389 ms | 0 |
 | `whisper-large-v3-auto` | 0.332 | 0.149 | 82.5% | 93.3% | 1/1 | 3.368 | 42894 ms | 0 |
-| `whisper-large-v3-sw` | 0.275 | 0.131 | 78.7% | — | — | 10.695 | 69468 ms | 0 |
+| `whisper-large-v3-sw` | 0.289 | 0.138 | 78.7% | — | — | 10.320 | 149686 ms | 0 |
 
-EESR is computed over 75 embedded-English spans
-and EESR-clinical over the 0 of those
+EESR is computed over 616 embedded-English spans
+and EESR-clinical over the 15 of those
 containing an affective term.
 
 **CIR and SPR are shown as raw counts, not percentages, and they are not results.** This
-corpus contains 0 instance(s) of any documented
-idiom and 0 of any safety phrase across all 12
+corpus contains 1 instance(s) of any documented
+idiom and 1 of any safety phrase across all 12
 conversations — simulated consultations for physical conditions simply do not contain the
 distress vocabulary this product exists to catch. A rate over n=1 is not a rate. Both
 metrics need field set C, which is written to carry them deliberately.
@@ -117,25 +117,55 @@ against the monolingual number.
 
 | Conversation | Model | WER | EESR | EESR-clinical | CIR |
 |---|---|---|---|---|---|
-| Acute Appendicitis | `elevenlabs-scribe-v2` | 0.123 | 86.1% | — | — |
+| Acute Appendicitis | `elevenlabs-scribe-v2` | 0.134 | 86.1% | — | — |
 | Acute Appendicitis | `jacaranda-asr-stt` | 0.521 | 50.0% | — | — |
 | Acute Appendicitis | `sahara-v2.5-corr-off` | 0.172 | 63.9% | — | — |
 | Acute Appendicitis | `whisper-large-v3-auto` | 0.218 | 86.1% | — | — |
-| Acute Appendicitis | `whisper-large-v3-sw` | 0.256 | 83.3% | — | — |
-| Asthma | `elevenlabs-scribe-v2` | 0.133 | 87.2% | — | — |
+| Acute Appendicitis | `whisper-large-v3-sw` | 0.284 | 83.3% | — | — |
+| Asthma | `elevenlabs-scribe-v2` | 0.131 | 87.2% | — | — |
 | Asthma | `jacaranda-asr-stt` | 0.574 | 30.8% | — | — |
 | Asthma | `sahara-v2.5-corr-off` | 0.145 | 76.9% | — | — |
 | Asthma | `whisper-large-v3-auto` | 0.293 | 82.0% | — | — |
 | Asthma | `whisper-large-v3-sw` | 0.294 | 74.4% | — | — |
+| Bronchopneumonia | `elevenlabs-scribe-v2` | 0.180 | 80.8% | — | — |
+| Bronchopneumonia | `jacaranda-asr-stt` | 0.552 | 38.5% | — | — |
+| Bronchopneumonia | `sahara-v2.5-corr-off` | 0.194 | 86.5% | — | — |
 | Bronchopneumonia | `whisper-large-v3-auto` | 0.417 | 65.4% | — | — |
+| Depression | `elevenlabs-scribe-v2` | 0.157 | 91.9% | 100.0% | 100.0% |
+| Depression | `jacaranda-asr-stt` | 0.624 | 33.9% | 50.0% | 100.0% |
+| Depression | `sahara-v2.5-corr-off` | 0.224 | 80.7% | 100.0% | 100.0% |
 | Depression | `whisper-large-v3-auto` | 0.308 | 83.9% | 100.0% | 100.0% |
+| Diabetes Mellitus | `elevenlabs-scribe-v2` | 0.231 | 83.3% | 0.0% | — |
+| Diabetes Mellitus | `jacaranda-asr-stt` | 0.563 | 28.6% | 0.0% | — |
+| Diabetes Mellitus | `sahara-v2.5-corr-off` | 0.206 | 83.3% | 0.0% | — |
 | Diabetes Mellitus | `whisper-large-v3-auto` | 0.443 | 81.0% | 100.0% | — |
+| Drug-induced Psychosis | `elevenlabs-scribe-v2` | 0.196 | 96.2% | 100.0% | — |
+| Drug-induced Psychosis | `jacaranda-asr-stt` | 0.584 | 39.2% | 0.0% | — |
+| Drug-induced Psychosis | `sahara-v2.5-corr-off` | 0.239 | 73.4% | 66.7% | — |
 | Drug-induced Psychosis | `whisper-large-v3-auto` | 0.371 | 91.1% | 100.0% | — |
+| Febrile Convulsion | `elevenlabs-scribe-v2` | 0.236 | 86.8% | — | — |
+| Febrile Convulsion | `jacaranda-asr-stt` | 0.637 | 35.9% | — | — |
+| Febrile Convulsion | `sahara-v2.5-corr-off` | 0.279 | 73.6% | — | — |
 | Febrile Convulsion | `whisper-large-v3-auto` | 0.424 | 80.2% | — | — |
+| Hypertension | `elevenlabs-scribe-v2` | 0.154 | 96.9% | 50.0% | — |
+| Hypertension | `jacaranda-asr-stt` | 0.567 | 12.5% | 0.0% | — |
+| Hypertension | `sahara-v2.5-corr-off` | 0.208 | 71.9% | 50.0% | — |
 | Hypertension | `whisper-large-v3-auto` | 0.329 | 81.2% | 50.0% | — |
+| Osteoarthritis | `elevenlabs-scribe-v2` | 0.180 | 90.3% | — | — |
+| Osteoarthritis | `jacaranda-asr-stt` | 0.641 | 19.4% | — | — |
+| Osteoarthritis | `sahara-v2.5-corr-off` | 0.173 | 74.2% | — | — |
 | Osteoarthritis | `whisper-large-v3-auto` | 0.316 | 83.9% | — | — |
+| PID | `elevenlabs-scribe-v2` | 0.146 | 91.7% | 100.0% | — |
+| PID | `jacaranda-asr-stt` | 0.424 | 50.0% | 0.0% | — |
+| PID | `sahara-v2.5-corr-off` | 0.181 | 73.3% | 100.0% | — |
 | PID | `whisper-large-v3-auto` | 0.258 | 88.3% | 100.0% | — |
+| Stroke | `elevenlabs-scribe-v2` | 0.187 | 80.0% | — | — |
+| Stroke | `jacaranda-asr-stt` | 0.605 | 31.1% | — | — |
+| Stroke | `sahara-v2.5-corr-off` | 0.181 | 86.7% | — | — |
 | Stroke | `whisper-large-v3-auto` | 0.341 | 77.8% | — | — |
+| Tuberculosis | `elevenlabs-scribe-v2` | 0.119 | 100.0% | 100.0% | — |
+| Tuberculosis | `jacaranda-asr-stt` | 0.485 | 40.6% | 0.0% | — |
+| Tuberculosis | `sahara-v2.5-corr-off` | 0.122 | 87.5% | 100.0% | — |
 | Tuberculosis | `whisper-large-v3-auto` | 0.261 | 87.5% | 100.0% | — |
 
 Raw per-sample output, including every hypothesis transcript, is in
