@@ -51,9 +51,13 @@ def build_adapter(key: str):
         from bench.adapters.jacaranda import JacarandaAdapter
 
         return JacarandaAdapter()
+    if key == "elevenlabs":
+        from bench.adapters.elevenlabs import ElevenLabsAdapter
+
+        return ElevenLabsAdapter()
     raise SystemExit(
         f"Unknown model key '{key}'. Known: sahara-off, sahara-on, whisper-sw, whisper-auto, "
-        f"whisper-sw:small, jacaranda"
+        f"whisper-sw:small, jacaranda, elevenlabs"
     )
 
 
