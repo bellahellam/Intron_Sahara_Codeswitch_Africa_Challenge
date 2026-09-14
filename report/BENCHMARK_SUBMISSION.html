@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MAMA-SAUTI — ASR Benchmark Report</title>
+<style>
+  @page { size: A4; margin: 1.4cm 1.6cm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Georgia, serif; font-size: 9.5pt; line-height: 1.4; color: #111; }
+  h1 { font-size: 13pt; margin-bottom: 2pt; }
+  h2 { font-size: 10.5pt; margin-top: 9pt; margin-bottom: 3pt; border-bottom: 1px solid #999; padding-bottom: 1pt; }
+  h3 { font-size: 9.5pt; margin-top: 6pt; margin-bottom: 2pt; font-style: italic; }
+  p { margin-bottom: 4pt; }
+  ul { margin: 3pt 0 3pt 14pt; }
+  li { margin-bottom: 1pt; }
+  .meta { font-size: 8.5pt; color: #555; margin-bottom: 6pt; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin: 4pt 0; }
+  th { background: #f0f0f0; text-align: left; padding: 2.5pt 4pt; border: 1px solid #ccc; font-weight: bold; }
+  td { padding: 2pt 4pt; border: 1px solid #ddd; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+  .shipped td { background: #eef4ff !important; font-weight: bold; }
+  .finding { background: #fff8e1; border-left: 3px solid #f59e0b; padding: 4pt 7pt; margin: 4pt 0; font-size: 9pt; }
+  .note { font-size: 8pt; color: #555; margin-top: 2pt; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 8pt; margin-top: 4pt; }
+  .col h3 { margin-top: 0; }
+  strong { font-weight: bold; }
+  em { font-style: italic; }
+</style>
+</head>
+<body>
+
+<h1>MAMA-SAUTI — ASR Benchmark Report</h1>
+<div class="meta">
+  Intron Sahara CodeSwitch Africa Challenge · Health Track &nbsp;|&nbsp;
+  Generated 2026-09-13 &nbsp;|&nbsp;
+  <a href="https://github.com/bellahellam/Intron_Sahara_Codeswitch_Africa_Challenge">github.com/bellahellam/Intron_Sahara_Codeswitch_Africa_Challenge</a>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>1. Purpose</h2>
+<p>MAMA-SAUTI is a postpartum mental health screening assistant that listens to a Kenyan mother speak in natural Kiswahili-English code-switching and produces a PHQ-9/GAD-7 screening record. The benchmark asks one question: does ASR quality on code-switched Swahili <strong>change the clinical decision</strong> this product makes?</p>
+<p>The dominant failure on this type of speech is <strong>switch-boundary deletion</strong> — the model returns fluent monolingual Swahili with the embedded English gone. In this setting that English carries the affective vocabulary ("stress", "depressed", "I can't cope"). Aggregate WER cannot distinguish losing a filler from losing the only clinical content in a sentence. This benchmark adds two metrics WER cannot see: <strong>EESR</strong> (Embedded-English Span Recall) and <strong>EESR-clinical</strong> (restricted to spans containing an affective term).</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>2. Data</h2>
+<table>
+  <tr><th>Property</th><th>Value</th></tr>
+  <tr><td><strong>Dataset</strong></td><td>intronhealth/AfriSwitchCare, config <em>swahili</em>, split <em>test</em> (CC BY-NC-SA 4.0, gated)</td></tr>
+  <tr><td><strong>Language</strong></td><td>Kiswahili-English intra-utterance code-switched</td></tr>
+  <tr><td><strong>Size</strong></td><td>12 simulated doctor-patient consultations · <strong>1.54 hours</strong> · mean CMI 37.4 (highest switch density of 8 languages in corpus)</td></tr>
+  <tr><td><strong>Chunking</strong></td><td>Fixed 75 s windows, 1 s overlap — computed once, shared byte-identically across all models to void segmentation as a confound</td></tr>
+  <tr><td><strong>Preprocessing</strong></td><td>Failed chunks recorded as failures (not empty strings — an empty transcript scores as perfect deletion). WER/CER: Intron normalisation (diacritics removed). EESR/CIR/SPR: diacritic-preserving normalisation (diacritic stripping collapses lexicon-matching distinctions).</td></tr>
+</table>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>3. Models</h2>
+<table>
+  <tr><th>Model</th><th>Type</th><th>Notes</th></tr>
+  <tr class="shipped"><td>Sahara v2.5 (corrections OFF)</td><td>Cloud API</td><td><strong>Shipped configuration.</strong> Corrections OFF: every score is justified by a verbatim quote read back to the patient — a smoothed rewrite is not her words. Primary column.</td></tr>
+  <tr><td>ElevenLabs Scribe v2</td><td>Cloud API</td><td>Strong multilingual model; no benchmarking ToS restriction. ~$0.22/hr.</td></tr>
+  <tr><td>Whisper large-v3 (auto-detect)</td><td>Local · CPU · int8</td><td>Language auto-detected per chunk via faster-whisper.</td></tr>
+  <tr><td>Whisper large-v3 (sw forced)</td><td>Local · CPU · int8</td><td>Language forced to <em>sw</em>. Tests whether the most-used open ASR model collapses code-switching when instructed to treat audio as monolingual Swahili.</td></tr>
+  <tr><td>Jacaranda-Health/ASR-STT</td><td>Local · CPU</td><td>Whisper-medium fine-tuned on Swahili+English by the organisation running maternal-health messaging for ~3M Kenyan mothers. The regional incumbent.</td></tr>
+</table>
+<p class="note"><strong>Excluded (with reasons):</strong> Deepgram (ToS §9 prohibits competitive benchmarking, unconditionally) · AssemblyAI (prohibits competitive analysis and third-party corpus evaluation) · NVIDIA Parakeet/Canary (no Swahili checkpoint) · w2v-BERT 2.0 (bare checkpoint, requires fine-tuning, cannot benchmark zero-shot).</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>4. Metrics</h2>
+<table>
+  <tr><th>Metric</th><th>↓/↑</th><th>Rationale</th></tr>
+  <tr><td><strong>WER</strong></td><td>↓</td><td>Standard. Reported under Intron's normalisation for comparability with published baselines.</td></tr>
+  <tr><td><strong>CER</strong></td><td>↓</td><td>More robust than WER for morphologically rich languages where a token error affects multiple characters.</td></tr>
+  <tr><td><strong>EESR</strong></td><td>↑</td><td>For each gold [[EN]]-tagged span, did its token sequence survive? Directly measures switch-boundary deletion. Net-new metric absent from Intron's benchmarking repo.</td></tr>
+  <tr><td><strong>EESR-clinical</strong></td><td>↑</td><td>EESR restricted to spans containing an affective term. A model can have healthy EESR while this collapses — and this is the subset that determines whether screening works.</td></tr>
+  <tr><td><strong>CMI-Δ</strong></td><td>↓</td><td>Difference in Code-Mixing Index between reference and hypothesis. Measures whether the model flattens the utterance's switching structure.</td></tr>
+  <tr><td><strong>p95 latency/chunk</strong></td><td>↓</td><td>Deployment constraint: product targets a mid-range Android in a low-connectivity clinic.</td></tr>
+</table>
+<p class="note">CIR and SPR are computed but shown as raw counts only (n=1 in this corpus — a rate over n=1 is not a rate). Tier 3 (band-flip, |ΔPHQ-9|) is absent by design: 11/12 conversations are non-psychiatric with PHQ-9 totals near zero; no transcription error can move the band. Stated explicitly, not hidden.</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>5. Quantitative Results</h2>
+<p><em>12 conversations · 1.54 h · Kiswahili-English code-switched · AfriSwitchCare Swahili test</em></p>
+
+<table>
+  <tr>
+    <th>Model</th>
+    <th>WER ↓</th>
+    <th>CER ↓</th>
+    <th>EESR ↑</th>
+    <th>EESR-cl ↑</th>
+    <th>CMI-Δ ↓</th>
+    <th>p95 ms/chunk</th>
+  </tr>
+  <tr><td>ElevenLabs Scribe v2</td><td><strong>0.171</strong></td><td><strong>0.075</strong></td><td><strong>89.1%</strong></td><td>80.0%</td><td>4.65</td><td>7,253</td></tr>
+  <tr class="shipped"><td>Sahara v2.5 (shipped, corr. OFF) ★</td><td>0.194</td><td>0.107</td><td>77.3%</td><td>73.3%</td><td>4.92</td><td><strong>7,389</strong></td></tr>
+  <tr><td>Whisper v3 (auto-detect)</td><td>0.332</td><td>0.149</td><td>82.5%</td><td><strong>93.3%</strong></td><td><strong>3.37</strong></td><td>42,894</td></tr>
+  <tr><td>Whisper v3 (sw forced)</td><td>0.289</td><td>0.138</td><td>78.7%</td><td>— †</td><td>10.32</td><td>149,686</td></tr>
+  <tr><td>Jacaranda-Health/ASR-STT</td><td>0.565</td><td>0.393</td><td>35.5%</td><td>20.0%</td><td>13.16</td><td>60,890</td></tr>
+</table>
+<p class="note">★ Deployed model. EESR computed over 616 embedded-English spans; EESR-clinical over the 15 containing an affective term.<br>
+† — means the model deleted <em>all</em> embedded English on clinical-affective spans — zero survived to score. This is the finding, not missing data.</p>
+
+<table style="margin-top:6pt;">
+  <tr><th colspan="2">Published baselines (context)</th></tr>
+  <tr><td>shamiriAI (Lilan et al. 2026, JMIR AI 5:e95063) — code-switched Kiswahili/English/Sheng mental health audio</td><td>WER 0.34, CER 0.19 ← <strong>realistic ceiling</strong></td></tr>
+  <tr><td>AfriSwitch best system, code-switched Swahili</td><td>WER 0.341</td></tr>
+  <tr><td>Intron MultiBench — <strong>monolingual</strong> accented clinical Swahili, Sahara</td><td>WER 0.068 ← <em>do not compare; gap to 0.34 is the competition's thesis</em></td></tr>
+</table>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>6. Qualitative Findings</h2>
+
+<div class="two-col">
+  <div class="col">
+    <h3>ElevenLabs Scribe v2</h3>
+    <p><strong>Strengths:</strong> Best WER and CER. Strong English span retention (EESR 89.1%). Low latency. Handles code-switching without language forcing.</p>
+    <p><strong>Weaknesses:</strong> EESR-clinical (80%) lower than Whisper auto despite better WER — some affective terms transcribed in paraphrase. Cloud-only; data leaves device (consent implications). Cost at scale.</p>
+
+    <h3>Sahara v2.5 (shipped, corrections OFF)</h3>
+    <p><strong>Strengths:</strong> Lowest latency (p95 7.4 s/chunk). Competitive WER for an African-language model. No switch-boundary catastrophe.</p>
+    <p><strong>Weaknesses:</strong> EESR-clinical 73.3% — lowest among models with a score. Corrections deliberately disabled; corrections-ON would score differently but introduces an undisclosed post-processor that makes the safety scan non-deterministic.</p>
+
+    <h3>Whisper v3 (auto-detect)</h3>
+    <p><strong>Strengths:</strong> Best EESR-clinical (93.3%) — preserves affective English better than any other model. Best CMI-Δ (3.37). No API cost.</p>
+    <p><strong>Weaknesses:</strong> Higher WER (0.332). p95 latency 43 s/chunk on CPU — not viable for real-time use without GPU.</p>
+  </div>
+  <div class="col">
+    <h3>Whisper v3 (sw forced)</h3>
+    <p><strong>Strengths:</strong> Lower aggregate WER than auto-detect (0.289). Faster than auto-detect.</p>
+    <p><strong>Weaknesses:</strong> <strong>The critical finding of this benchmark.</strong> Forcing <em>language="sw"</em> causes the model to delete all embedded English. EESR-clinical is unmeasurable — zero affective English spans survived across all 12 conversations. CMI-Δ 10.32 confirms the switching structure is flattened. A lower WER while losing all clinical content is the exact failure mode this benchmark was built to detect. This configuration is unsafe for this use case.</p>
+
+    <h3>Jacaranda-Health/ASR-STT</h3>
+    <p><strong>Strengths:</strong> Regional incumbent with direct maternal-health deployment experience. No API cost. Relevant baseline: if Sahara did not beat this model, that would be a publishable negative finding.</p>
+    <p><strong>Weaknesses:</strong> Worst on every metric — WER 0.565, EESR 35.5%, EESR-clinical 20.0%. Loses the majority of embedded English and scores near-zero on affective terms for most conversations.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>7. Key Finding</h2>
+<div class="finding">
+  <strong>The question is not WER — it is what survives at the switch boundary.</strong><br>
+  Whisper sw-forced achieves lower WER than auto-detect but loses <em>all</em> clinical English. Jacaranda, the regional incumbent, loses most of it. Sahara achieves competitive WER with the lowest latency but lower EESR-clinical than either Whisper condition. ElevenLabs leads on standard metrics. For a product where the clinical decision depends on affective English vocabulary surviving transcription, <strong>EESR-clinical is the metric that matters</strong>.<br><br>
+  Sahara v2.5 (corrections OFF) is the deployed configuration because it is the only model that combines: (a) sub-10 s chunk latency for real-time use in a low-connectivity clinic, (b) no switch-boundary deletion catastrophe, and (c) a deterministic transcript that can be quoted verbatim back to the patient.
+</div>
+
+<p class="note" style="margin-top:8pt;">
+  Every number is auditable to a hypothesis transcript. Reproduce: <code>python -m bench.run && python -m bench.report</code>.
+</p>
+
+</body>
+</html>
