@@ -148,7 +148,7 @@ export function AmplitudeMeter({ level, lowHint }: { level: number; lowHint: boo
  */
 export function ListeningControl({
   recording, voiceActive, level, elapsed, lowLevel, busy, onStart, onStop,
-  probe, screeningComplete, onProbeTap,
+  probe, screeningComplete, onProbeTap, onProbeSkip,
 }: {
   recording: boolean; voiceActive: boolean; level: number; elapsed: string;
   lowLevel: boolean; busy: boolean; onStart: () => void; onStop: () => void;
@@ -157,9 +157,12 @@ export function ListeningControl({
   /** True once decide() has returned COMPLETE. The slot then shows a neutral message instead
    *  of vanishing, so its absence reads as finished, not broken. */
   screeningComplete?: boolean;
-  /** Marks the segment as containing CHP speech (§11.3a). Never clears the probe — it stays
-   *  until the next question replaces it, because there is nothing here for her to dismiss. */
+  /** Marks the segment as containing CHP speech (§11.3a). Never clears the probe on its own —
+   *  it stays until the next question replaces it or she explicitly skips it. */
   onProbeTap?: () => void;
+  /** Ruka: clears this suggestion from the dock. Equal-weight alternative to asking it, not a
+   *  fallback — §9.2 requires skipping to never read as the discouraged choice. */
+  onProbeSkip?: () => void;
 }) {
   if (!recording) {
     return (
@@ -214,27 +217,44 @@ export function ListeningControl({
       {/* Work in flight is shown as reassurance, never as a number or a spinner she must wait on. */}
       {busy && <p style={{ margin:0, fontSize:14, color:"#64747B" }}>{COPY.states.working.sw}</p>}
 
-      {/* The whisper slot. A suggestion, never a blocking card: no buttons, nothing to dismiss.
-          Tapping it marks the segment as CHP speech and otherwise changes nothing on screen. */}
+      {/* The whisper slot. A suggestion, never an instruction (§9.2): asking and skipping stay
+          equal-weight choices, just quieter than the old bordered card — tapping the question
+          marks the segment as CHP speech, and Ruka is always right there beside it, not hidden
+          in a menu or styled as the discouraged option. */}
       {probe ? (
-        <button
-          type="button"
-          onClick={onProbeTap}
-          style={{
-            display:"flex", gap:9, alignItems:"flex-start", textAlign:"left",
-            padding:"9px 11px", borderRadius:9,
-            background:"#FDF8F2", border:"none", borderLeft:"3px solid #D9B98E",
-            cursor:"pointer",
-          }}
-        >
-          <span aria-hidden style={{ width:6, height:6, borderRadius:"50%", background:"#A8652A", marginTop:6, flexShrink:0 }} />
-          <span style={{ minWidth:0 }}>
+        <div style={{
+          padding:"9px 11px", borderRadius:9,
+          background:"#FDF8F2", borderLeft:"3px solid #D9B98E",
+        }}>
+          <button
+            type="button"
+            onClick={onProbeTap}
+            aria-label={COPY.buttons.ask.sw}
+            style={{
+              display:"flex", gap:9, alignItems:"flex-start", textAlign:"left", width:"100%",
+              background:"none", border:"none", padding:0, margin:0, cursor:"pointer",
+            }}
+          >
+            <span aria-hidden style={{ width:6, height:6, borderRadius:"50%", background:"#A8652A", marginTop:6, flexShrink:0 }} />
             <span style={{ display:"block", fontStyle:"italic", fontSize:14, lineHeight:1.5, color:"#8C521F" }}>{probe.text}</span>
-            <span style={{ display:"block", marginTop:3, fontSize:10, letterSpacing:".04em", color:"#B09272" }}>
+          </button>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:4, paddingLeft:15 }}>
+            <span style={{ fontSize:10, letterSpacing:".04em", color:"#B09272" }}>
               {COPY.probeHint.sw} · <span className="gloss">{COPY.probeHint.en}</span>
             </span>
-          </span>
-        </button>
+            <button
+              type="button"
+              onClick={onProbeSkip}
+              style={{
+                flexShrink:0, background:"none", border:"none", padding:"4px 2px", margin:0,
+                font:"600 12px Inter, system-ui, sans-serif", color:"#8C521F", textDecoration:"underline",
+                cursor:"pointer",
+              }}
+            >
+              {COPY.buttons.skip.sw}
+            </button>
+          </div>
+        </div>
       ) : screeningComplete ? (
         <div style={{
           display:"flex", gap:9, alignItems:"flex-start",

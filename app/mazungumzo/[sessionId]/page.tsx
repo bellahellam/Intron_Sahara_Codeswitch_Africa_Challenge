@@ -319,6 +319,7 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
           probe={probe}
           screeningComplete={screeningComplete}
           onProbeTap={() => recorder.markSpeaking()}
+          onProbeSkip={() => setProbe(null)}
         />
       </div>
     </main>

@@ -46,6 +46,8 @@ export const COPY = {
     startListening: { sw: "Anza kusikiliza", en: "Start listening" },
     endVisit: { sw: "Maliza ziara", en: "End the visit" },
     stop: { sw: "Simamisha", en: "Stop" },
+    ask: { sw: "Uliza", en: "Ask" },
+    skip: { sw: "Ruka", en: "Skip" },
     correct: { sw: "Sahihisha", en: "Correct" },
     disputed: { sw: "Amekanusha", en: "She disagrees" },
     riskFlag: { sw: "Alama ya hatari", en: "Raise risk flag" },
