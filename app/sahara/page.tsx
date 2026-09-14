@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Header } from "@/components/ui";
 import results from "@/data/benchmark_results.json";
 import { requireAdmin } from "@/lib/auth";
+import { FullReportModal } from "@/components/FullReportModal";
 
 export const metadata = { title: "Kwa nini Sahara? — MAMA-SAUTI" };
 
@@ -118,10 +119,7 @@ export default async function WhySahara() {
           )}
         </section>
 
-        <p className="text-xs text-neutral-400">
-          Published baselines, excluded models, and full method are in{" "}
-          <code className="text-xs">report/BENCHMARK.md</code>.
-        </p>
+        <FullReportModal />
 
         <Link href="/" className="btn-quiet flex items-center justify-center">
           Rudi nyumbani
