@@ -36,6 +36,11 @@ export default function Review({ params }: { params: Promise<{ sessionId: string
 
   const [items, setItems] = useState<EvidenceItem[]>([]);
   const [coverage, setCoverage] = useState<CoverageMap>(emptyCoverage());
+  // Fetched but previously discarded — meaning "nothing was evidenced" rendered unconditionally
+  // even when the session had actually escalated on turn 1 (safety scan short-circuits before
+  // extraction ever runs, so zero scored items is expected there, not a failure). Matokeo goes on
+  // to show facility_urgent for exactly this session, which read as a flat contradiction.
+  const [escalated, setEscalated] = useState(false);
   const [stage, setStage] = useState<Stage>("confirm");
   const [backRead, setBackRead] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,6 +54,7 @@ export default function Review({ params }: { params: Promise<{ sessionId: string
         if (d) {
           setItems(d.items ?? []);
           if (d.coverage) setCoverage(d.coverage);
+          setEscalated(d.escalated === true);
         }
         setLoading(false);
       })
@@ -184,12 +190,24 @@ export default function Review({ params }: { params: Promise<{ sessionId: string
         {stage === "confirm" ? (
           <>
             {visible.length === 0 ? (
-              <p className="text-neutral-700">
-                Hakuna kilichopatikana katika mazungumzo haya.
-                <span className="gloss block not-italic">
-                  Nothing was evidenced in this conversation. The record will say so plainly.
-                </span>
-              </p>
+              escalated ? (
+                <div className="rounded-md border border-danger bg-white px-3 py-2 text-sm">
+                  <p className="font-medium text-danger">
+                    ! Hakuna kipengele cha PHQ-9/GAD-7 kilichopatikana, lakini kikao hiki kiliashiria hatari.
+                  </p>
+                  <p className="gloss not-italic">
+                    No PHQ-9/GAD-7 item was evidenced — but this session raised a safety concern.
+                    That carries through to the result regardless of the score.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-neutral-700">
+                  Hakuna kilichopatikana katika mazungumzo haya.
+                  <span className="gloss block not-italic">
+                    Nothing was evidenced in this conversation. The record will say so plainly.
+                  </span>
+                </p>
+              )
             ) : (
               <>
                 {unresolvedAmber.length > 0 && (
