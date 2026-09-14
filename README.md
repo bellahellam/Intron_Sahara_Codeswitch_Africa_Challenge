@@ -51,7 +51,9 @@ contain no model at all.** A clinical score produced by an LLM is not defensible
 | **npm** | 10 or newer | `npm -v` |
 | **git** | any | `git --version` |
 
-No database server is needed. It runs on a local SQLite file out of the box.
+**A Postgres database is needed** — a free [Neon](https://neon.tech) or Supabase instance works
+fine. `prisma/schema.prisma` targets Postgres; `DATABASE_URL` must be a `postgresql://` connection
+string, not a local file (see step 5).
 
 **Python 3.11+** is needed for the benchmark harness (`bench/`). A CUDA GPU makes the local
 model rows practical but is not required, see the benchmark section.
@@ -101,8 +103,12 @@ SAHARA_API_KEY=<your intron key>
 LLM_PROVIDER=openrouter
 OPENROUTER_API_KEY=<your openrouter key>
 HF_TOKEN=<your hugging face token>        # benchmark only
-ADMIN_TOKEN=<any passphrase you choose>   # unlocks /admin
 ```
+
+Signing in needs nothing further locally: `demo-user` (CHP) and `demo-admin` (admin) work out of
+the box. To set your own passwords instead, add `AUTH_SESSION_SECRET`, `AUTH_USER_PASSWORD` and
+`AUTH_ADMIN_PASSWORD` — required for anything beyond a local demo, since sign-in refuses to fall
+back to the demo passwords once `NODE_ENV=production`.
 
 **Two env files, on purpose:** `.env` holds `DATABASE_URL` because the Prisma CLI does not read
 `.env.local`; `.env.local` holds every actual secret. Both are gitignored. `.env` is created for
@@ -115,14 +121,22 @@ instant, so ask early.
 
 ## 5. Create the database
 
+Provision a Postgres instance (a free [Neon](https://neon.tech) project takes a minute) and put its
+connection string in `.env` — the Prisma CLI only reads `.env`, not `.env.local`:
+
+```
+DATABASE_URL="postgresql://<user>:<password>@<host>/<db>?sslmode=require"
+```
+
+Then:
+
 ```bash
 npm run db:push
 ```
 
-This writes `prisma/dev.db` (SQLite) and generates the Prisma client. **To use Postgres instead**
-(Neon, Supabase): change `provider` to `postgresql` in `prisma/schema.prisma`, change every
-`String` field whose name ends in `Json` to `Json`, point `DATABASE_URL` at your instance, and
-re-run. No application code changes; all JSON marshalling goes through `lib/db.ts`.
+This creates the six tables and generates the Prisma client. JSON-shaped fields (coverage state,
+scores, spans) are still plain `String` columns holding serialized JSON, not native Postgres
+`jsonb` — marshalling goes through `lib/db.ts` either way, so the app works the same regardless.
 
 ## 6. Prove the external services before trusting them
 
@@ -155,16 +169,21 @@ npm run dev
 Open **http://localhost:3000**. Use your browser's device toolbar at **360×640**. The layout
 target is a mid-range Android, and that's the width it's verified at.
 
-### The two views
+### Sign in, then the two views
+
+`/login` asks which role you're in before anything else:
 
 | | |
 |---|---|
-| **`/`**: the CHP view | What a community health worker sees. No confidence numbers, no latencies, no model names. She taps **once** to start listening and **once** when the visit ends |
-| **`/admin`**: the technical view | Pipeline telemetry, audit trail, live model config, and the canaries. Unlocked with `ADMIN_TOKEN` |
+| **Community health worker** | A CHP code plus the shared user password. Scoped to that CHP's own screenings, nothing else. No confidence numbers, no latencies, no model names. She taps **once** to start capture and **once** when the visit ends |
+| **Administrator** | The shared admin password, no CHP code. Reaches `/admin` (pipeline telemetry, audit trail, live model config, canaries) and `/sahara` (the benchmark writeup, see below) |
 
-**Walking a screening:** enter any CHP code (e.g. `KWG-014`) → `Anza uchunguzi` → type a name →
-`Amekubali` on the consent screen → tap **Anza kusikiliza** → talk normally → evidence cards appear
-as segments close on silence → `Maliza` → confirm amber items → back-read → `Tuma rufaa`.
+**Walking a screening:** sign in as a CHP → `Anza uchunguzi` → type a name → `Amekubali` on the
+consent screen → tap to start capture → talk normally. When there's a follow-up worth asking, it's
+whispered on screen; she can tap to ask it or skip it, no penalty either way. Evidence cards appear
+as segments close on silence. `Maliza ziara` ends the visit and moves to `Kagua` (confirm or
+dispute what was heard), then `Matokeo` (score and tier), then `Rufaa` (send the referral, when one
+is needed).
 
 Capture is hands-free by design. She does not press anything between turns; segments close
 automatically after about two seconds of silence. Asking a health worker to reach for a phone
@@ -172,9 +191,11 @@ mid-conversation, possibly mid-disclosure, costs more in care than it buys in ti
 
 The browser asks for microphone permission at the first tap, in context, never at launch.
 
-> `/admin` is gated by a shared passphrase, **not authentication**. It keeps the technical surface
-> off a CHP's phone and gates a demo view. A CHP code is an identifier, not a secret (§14.5). Real
-> auth is pilot work.
+> A CHP code is an identifier, not a secret (§14.5) — it scopes what a session can see, it isn't
+> what authorizes the session. Authorization is now a real signed-in session (an HMAC-signed
+> cookie set at `/login`, checked on every request by `proxy.ts`), not a shared passphrase in a URL
+> or header. Two passwords shared per role is still far short of per-CHP accounts; that remains
+> pilot work.
 
 ## 8. Testing without spending Sahara credits
 
@@ -351,7 +372,8 @@ Start these first. They are free to request and they block submission.
 | Symptom | Cause and fix |
 |---|---|
 | `XAI_API_KEY is not set` (or similar) when you have set it | You edited `.env.example` rather than `.env.local`, or the variable name does not match `LLM_PROVIDER`. |
-| `Environment variable not found: DATABASE_URL` | `.env` is missing. Create it with `DATABASE_URL="file:./dev.db"`. |
+| `Environment variable not found: DATABASE_URL` | `.env` is missing. Create it with a `postgresql://` connection string (step 5). |
+| `the URL must start with the protocol postgresql://` | `DATABASE_URL` is pointed at a local file. The schema now targets Postgres only; point it at a real instance instead. |
 | `403 permission-denied ... no credits` | The LLM account has no credits. xAI is not free; switch `LLM_PROVIDER` to `openrouter` or `gemini`. |
 | `404 ... is deprecated` from OpenRouter | Free model ids churn. Run `npx tsx scripts/list-openrouter-free.ts`, then `npx tsx scripts/compare-llms.ts` to pick a replacement by measurement. Do not guess one. |
 | `EPERM ... query_engine-windows.dll.node` on build | The dev server has the Prisma engine locked. Stop it, then build. |
@@ -395,7 +417,7 @@ CHP's Android browser ──── audio (WebM/Opus) ───▶ Next.js route 
                                           7. score() · route_referral()
                                              PURE, DETERMINISTIC
                                                     │
-                                              SQLite / Postgres
+                                                 Postgres
                                               (audio never written)
 ```
 
@@ -442,6 +464,7 @@ the point of the function.
 | `lib/llm/` | Contract 2b: `LLMAdapter` and the provider presets |
 | `lib/agent/` | The orchestrator, probe generation, the two generated summaries |
 | `lib/copy.ts` | **Every user-visible Kiswahili string**, in one file, for native-speaker review |
+| `lib/auth/`, `proxy.ts` | The session cookie (sign, verify, role), and the route gate that checks it on every request |
 | `data/` | The lexicons and the fixed item-9 probe (CSV and txt), so a clinician can review them without reading TypeScript |
 | `docs/contracts.md` | The two frozen interface contracts |
 | `docs/llm-selection.md` | How the extraction model was chosen, and what it still gets wrong |
@@ -457,6 +480,9 @@ the point of the function.
 - [docs/HUMAN-TASKS.md](docs/HUMAN-TASKS.md): the three tasks that need a person, with the wording to ask for
 - [RESPONSIBLE-AI.md](RESPONSIBLE-AI.md): consent, risk and privacy, and where each is enforced in code
 - [MAMA-SAUTI-Build-Spec.md](MAMA-SAUTI-Build-Spec.md): the full product specification
+- [report/BENCHMARK.md](report/BENCHMARK.md): the full benchmark writeup — published baselines,
+  excluded models, and method. `/sahara` in the app shows the results table only and points here
+  for the rest
 
 ## Licensing and attribution
 
