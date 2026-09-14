@@ -99,9 +99,16 @@ export async function POST(req: Request) {
   let measuredDurationSeconds: number | null = null;
 
   try {
+    // This route shares one 60s `maxDuration` (Hobby plan — fixed, not ours to raise) with the
+    // extraction and probe generation that run after ASR in the same request. Sahara's own
+    // default timeout (130s) assumes it owns the whole budget, which is true for a standalone
+    // caller like scripts/smoke-sahara.ts but not here. 2 attempts x 20s leaves headroom above
+    // the slowest successful call seen in production telemetry (14.8s) while still failing a
+    // truly hung call fast enough for extraction/probe to have a chance to run at all.
     const result = await transcribeWithRetry(adapter, new Blob([new Uint8Array(buffer)], { type: audio.type }), {
       lang: "sw",
-      maxAttempts: 3,
+      maxAttempts: 2,
+      timeoutMs: 20_000,
     });
     transcript = result.text;
     asrLatencyMs = result.latencyMs;

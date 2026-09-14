@@ -6,7 +6,7 @@
  * and is expected to change before submission; changing it must not touch a call site.
  */
 
-import { LLMError, type CompletionRequest, type CompletionResult, type LLMAdapter } from "./types";
+import { DEFAULT_LLM_TIMEOUT_MS, LLMError, type CompletionRequest, type CompletionResult, type LLMAdapter } from "./types";
 
 export interface OpenAICompatibleConfig {
   name: string;
@@ -64,7 +64,7 @@ export class OpenAICompatibleAdapter implements LLMAdapter {
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), req.timeoutMs ?? 45_000);
+    const timeout = setTimeout(() => controller.abort(), req.timeoutMs ?? DEFAULT_LLM_TIMEOUT_MS);
 
     let res: Response;
     try {

@@ -6,7 +6,7 @@
  * quality. If free-tier schema violations become frequent during testing, this is the switch.
  */
 
-import { LLMError, type CompletionRequest, type CompletionResult, type LLMAdapter } from "./types";
+import { DEFAULT_LLM_TIMEOUT_MS, LLMError, type CompletionRequest, type CompletionResult, type LLMAdapter } from "./types";
 
 const BASE = "https://generativelanguage.googleapis.com/v1beta";
 
@@ -65,7 +65,7 @@ export class GeminiAdapter implements LLMAdapter {
     };
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), req.timeoutMs ?? 45_000);
+    const timeout = setTimeout(() => controller.abort(), req.timeoutMs ?? DEFAULT_LLM_TIMEOUT_MS);
 
     let res: Response;
     try {

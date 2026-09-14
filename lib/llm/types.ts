@@ -11,6 +11,17 @@
  * Schema adherence is never trusted from the model. Every response is re-validated in code.
  */
 
+/**
+ * Every LLM-backed route (`/api/turn`, `/api/backread`, `/api/complete`) caps at
+ * `maxDuration = 60` on Vercel, and each retries a failed completion once. `/api/turn` is the
+ * tightest case: extraction and probe generation run sequentially in the same request, so a
+ * single turn can attempt up to 4 completions. 4 x 10s leaves real room for the ASR call and DB
+ * writes sharing that same 60s budget — a hung or degraded provider call is aborted and retried
+ * quickly instead of eating the whole request on one attempt (as 45s previously did: two 45s
+ * attempts alone was already 90s, longer than the function had to run at all).
+ */
+export const DEFAULT_LLM_TIMEOUT_MS = 10_000;
+
 export interface CompletionRequest {
   system: string;
   user: string;
