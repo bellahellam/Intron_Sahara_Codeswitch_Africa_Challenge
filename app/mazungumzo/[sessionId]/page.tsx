@@ -75,11 +75,12 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
 
   // Segments must reach the server IN ORDER — the agent's coverage state is sequential.
   const queueRef = useRef<Promise<void>>(Promise.resolve());
-  // Set the moment a segment's response escalates, checked by finish() before it navigates.
-  // Needed because MediaRecorder.stop() is async: without this, finish() could already be
-  // mid-navigation to Kagua by the time the final segment — possibly the one with the
-  // disclosure that matters most — comes back as an escalation.
-  const justEscalatedRef = useRef(false);
+
+  // Once escalation fires, the visit is latched: no further segment response may navigate,
+  // clear the modal, or advance the flow. The only way off the escalation screen is the CHP
+  // acknowledging it. This ref is read synchronously inside the async queue, where React state
+  // would be stale.
+  const escalatedRef = useRef(false);
 
   useEffect(() => {
     setOnline(navigator.onLine);
@@ -101,8 +102,18 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
       form.append("durationMs", String(segment.durationMs));
       if (segment.chpSpokeDuring) form.append("chpSpokeDuring", "true");
 
+      // Already escalated by an earlier segment — this is a trailing segment flushed by
+      // recorder.stop(). Do not send it, do not let its response touch any state. The
+      // escalation screen must stay exactly as it is until the CHP acknowledges it.
+      if (escalatedRef.current) return;
+
       try {
         const res = await fetch("/api/turn", { method: "POST", body: form });
+
+        // Re-check after the await: escalation may have fired on a segment that resolved while
+        // this request was in flight.
+        if (escalatedRef.current) return;
+
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           setError({
@@ -113,14 +124,11 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
         }
 
         const data: TurnResponse = await res.json();
-        setLastTurn(data);
-        setCoverage(data.coverage);
-        setItems((prev) => [...prev, ...data.items]);
-        setError(null);
 
-        // Safety escalation fires regardless of which preset question we're on.
+        // Safety escalation fires regardless of which preset question we're on. Check this
+        // BEFORE writing any other state, and latch it so nothing else can run afterwards.
         if (data.decision.action === "ESCALATE" || data.safety.hit || data.riskFlag) {
-          justEscalatedRef.current = true;
+          escalatedRef.current = true;
           setEscalation({
             matchedTexts: [
               ...data.safety.hits.map((h) => h.matchedText),
@@ -129,11 +137,19 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
             source: data.safety.hit ? "deterministic_lexicon" : "llm_risk_flag",
             failedClosed: data.safety.failedClosed,
           });
-          recorder.stop();
+          // Abort, not stop: stop() flushes a trailing segment that would post another turn.
+          // abort() drops everything in flight and emits nothing further.
+          recorder.abort();
           return;
         }
+
+        setLastTurn(data);
+        setCoverage(data.coverage);
+        setItems((prev) => [...prev, ...data.items]);
+        setError(null);
         // LLM-generated probes are ignored in MVP — we show preset questions only.
       } catch {
+        if (escalatedRef.current) return;
         setError({ sw: COPY.states.failedNetwork.sw, en: COPY.states.failedNetwork.en });
       }
     },
@@ -154,7 +170,8 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
   const recorder = useContinuousRecorder(onSegment);
 
   async function raiseManualFlag() {
-    recorder.stop();
+    escalatedRef.current = true;
+    recorder.abort();
     await fetch("/api/escalate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -169,8 +186,12 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId, acknowledged: true, quoteSuppressed }),
     }).catch(() => {});
-    justEscalatedRef.current = false;
+    // escalatedRef stays true deliberately — the session is latched, same as the server-side
+    // decision engine. Nothing resumes recording after this; the next stop is Kagua.
     setEscalation(null);
+    // The screening still produced a record and an urgent referral. After the CHP has
+    // spoken with the mother, move to review so the referral can be sent.
+    router.push(`/kagua/${sessionId}`);
   }
 
   async function withdrawConsent() {
@@ -184,18 +205,20 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
   }
 
   async function finish() {
+    // Already escalated by an earlier segment — the escalation screen owns this session now.
+    if (escalatedRef.current) return;
     setFinishing(true);
     // Wait for the final segment to actually be handed to onSegment before touching queueRef —
-    // recorder.stop() used to be fire-and-forget here, so this navigation could get queued
-    // *before* the final segment (the one most likely to contain whatever she says last) was
-    // even enqueued for sending, let alone processed. That let this page navigate to Kagua out
-    // from under an escalation the final segment had just triggered.
+    // recorder.stop() is async, so without this the check below could run *before* the final
+    // segment (the one most likely to contain whatever she says last) was even enqueued for
+    // sending, let alone processed. That let this page navigate to Kagua out from under an
+    // escalation the final segment had just triggered.
     await recorder.stop();
     await queueRef.current;
     // If that final segment escalated, the Escalation overlay is already showing (sendSegment
-    // set justEscalatedRef and escalation state before this promise resolved). Stay put — she
+    // set escalatedRef and escalation state before this promise resolved). Stay put — she
     // acknowledges it normally, and finishing the visit happens afterward, not instead of it.
-    if (justEscalatedRef.current) return;
+    if (escalatedRef.current) return;
     router.push(`/kagua/${sessionId}`);
   }
 

@@ -19,7 +19,6 @@
 
 import { useState } from "react";
 import { COPY } from "@/lib/copy";
-import contactsData from "@/data/crisis_contacts.json";
 
 export interface EscalationTrigger {
   /**
@@ -33,34 +32,15 @@ export interface EscalationTrigger {
   failedClosed?: boolean;
 }
 
-interface Contact {
-  order: number;
-  id: string;
-  service_sw: string;
-  service_en: string;
-  number: string | null;
-  configurable_per_chu?: boolean;
-  scope_sw: string;
-  cost_sw: string;
-  hours_sw: string;
-  hours_24h: boolean;
-  opens_hour: number;
-  closes_hour: number;
-  read_aloud: boolean;
-  immediate_danger_only: boolean;
-  caveat_sw?: string | null;
-  alt_number?: string;
-}
-
 export function Escalation({
   trigger,
   onAcknowledge,
   onWithdraw,
-  linkFacilityNumber,
 }: {
   trigger: EscalationTrigger;
   onAcknowledge: (quoteSuppressed: boolean) => void;
   onWithdraw: () => void;
+  /** Kept optional for callers that still pass it; no longer rendered. */
   linkFacilityNumber?: string | null;
 }) {
   // Step 2 must be answered before anything else is revealed. `null` = not yet asked.
@@ -68,8 +48,6 @@ export function Escalation({
   const [confirmingWithdraw, setConfirmingWithdraw] = useState(false);
 
   const suppressQuote = othersCanSee === true;
-  const contacts = (contactsData.contacts as Contact[]).slice().sort((a, b) => a.order - b.order);
-  const hour = new Date().getHours();
 
   return (
     <div className="animate-escalate fixed inset-0 z-50 overflow-y-auto bg-escalation text-white">
@@ -147,29 +125,6 @@ export function Escalation({
             </div>
 
             {/* 5–6. Contacts. Facility first, because rule 1 has just routed facility_urgent. */}
-            <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wide text-white/70">Msaada</p>
-              {contacts
-                .filter((c) => !c.immediate_danger_only)
-                .map((c) => (
-                  <ContactRow
-                    key={c.id}
-                    contact={c}
-                    hour={hour}
-                    override={c.id === "link_facility" ? linkFacilityNumber ?? null : null}
-                  />
-                ))}
-
-              <p className="pt-3 text-xs uppercase tracking-wide text-white/70">
-                Kwa dharura ya papo hapo pekee
-              </p>
-              {contacts
-                .filter((c) => c.immediate_danger_only)
-                .map((c) => (
-                  <ContactRow key={c.id} contact={c} hour={hour} override={null} />
-                ))}
-            </div>
-
             {/* 7. Acknowledge. Deliberately not the only control on the screen — a single-control
                    screen produces reflex taps (§21.7), which is why step 2 sits above it. */}
             <div className="space-y-3 pt-2">
@@ -230,45 +185,4 @@ function dedupe(texts: string[]): string[] {
     .slice(0, 4);
 }
 
-/**
- * Each row shows the number, the service, its operating hours AND its cost — because a CHP who
- * taps an 08:00–22:00 line at 22:30 reaches nothing at the worst possible moment, and because
- * §4.1 establishes that her airtime is prepaid and rationed.
- */
-function ContactRow({ contact, hour, override }: { contact: Contact; hour: number; override: string | null }) {
-  const number = override ?? contact.number;
-  const open = contact.hours_24h || (hour >= contact.opens_hour && hour < contact.closes_hour);
 
-  if (!number) {
-    // The link facility is configured per CHU. Saying so is better than showing a dead row.
-    return (
-      <div className="rounded-lg border border-white/40 p-3 text-sm text-white/70">
-        <span className="block font-semibold text-white">{contact.service_sw}</span>
-        Nambari haijawekwa kwa eneo hili. Uliza msimamizi wako.
-        <span className="block text-xs">This CHU&apos;s facility number has not been configured.</span>
-      </div>
-    );
-  }
-
-  return (
-    <a
-      href={`tel:${number}`}
-      className={[
-        "flex items-center justify-between rounded-lg border-2 p-3",
-        open ? "border-white bg-white/10" : "border-white/30 bg-transparent opacity-60",
-      ].join(" ")}
-    >
-      <span>
-        <span className="block text-xl font-bold tabular">{number}</span>
-        <span className="block text-sm">{contact.service_sw}</span>
-        <span className="block text-xs text-white/70">{contact.scope_sw}</span>
-        {contact.caveat_sw && <span className="block text-xs text-white/90">! {contact.caveat_sw}</span>}
-      </span>
-      <span className="text-right text-xs text-white/80">
-        <span className="block">{contact.cost_sw}</span>
-        <span className="block">{contact.hours_sw}</span>
-        {!open && <span className="block font-semibold">Imefungwa sasa</span>}
-      </span>
-    </a>
-  );
-}
