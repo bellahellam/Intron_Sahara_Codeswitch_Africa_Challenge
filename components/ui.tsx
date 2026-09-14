@@ -66,17 +66,45 @@ export function DisclaimerStrip({ withValidation = false }: { withValidation?: b
   );
 }
 
+/* ── Processing indicator ────────────────────────────────────────────────── */
+// Three dots, so any screen with a slow network call in flight (backread generation, a save,
+// a session create) has something visibly alive on screen instead of a static label she has to
+// take on faith. Deliberately not a percentage or a spinner ring — nothing here claims to know
+// how long the wait will be.
+export function Dots({ color = "currentColor" }: { color?: string }) {
+  return (
+    <span aria-hidden style={{ display:"inline-flex", gap:3, alignItems:"center" }}>
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="animate-dot-bounce"
+          style={{
+            width:5, height:5, borderRadius:"50%", background:color,
+            animationDelay:`${i * 0.15}s`,
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
 /* ── Primary button ──────────────────────────────────────────────────────── */
 export function PrimaryButton({
-  children, onClick, disabled, disabledReason, type = "button",
+  children, onClick, disabled, disabledReason, type = "button", busy,
 }: {
   children: React.ReactNode; onClick?: () => void; disabled?: boolean;
   disabledReason?: string; type?: "button" | "submit";
+  /** Shows the processing dots next to the label. Pass the same flag you already use to disable
+   *  the button while a request is in flight. */
+  busy?: boolean;
 }) {
   return (
     <div>
       <button type={type} className="btn-primary" onClick={onClick} disabled={disabled}>
-        {children}
+        <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+          {children}
+          {busy && <Dots color="#fff" />}
+        </span>
       </button>
       {disabled && disabledReason && (
         <p style={{ fontSize:12, color:"#9CA3AF", textAlign:"center", marginTop:6 }}>
@@ -264,7 +292,14 @@ export function ListeningControl({
           <span aria-hidden style={{ width:6, height:6, borderRadius:"50%", background:"#BCB0D4", marginTop:6, flexShrink:0 }} />
           <p style={{ margin:0, fontStyle:"italic", fontSize:14, lineHeight:1.5, color:"#7D7691" }}>{COPY.noMoreQuestions.sw}</p>
         </div>
-      ) : null}
+      ) : (
+        // Right after Ruka, until the next segment brings a new suggestion. Deliberately quieter
+        // than both cards above it — no border, no dot — so a brief gap never reads as the
+        // screening having ended or the app having broken.
+        <p style={{ margin:0, paddingLeft:2, fontStyle:"italic", fontSize:13, lineHeight:1.5, color:"#9AA6AC" }}>
+          {COPY.noQuestionPending.sw} <span className="gloss">{COPY.noQuestionPending.en}</span>
+        </p>
+      )}
 
       <button type="button" onClick={onStop} className="btn-primary">
         {COPY.buttons.endVisit.sw}

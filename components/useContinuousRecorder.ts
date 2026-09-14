@@ -120,45 +120,65 @@ export function useContinuousRecorder(onSegment: (segment: Segment) => void) {
   }, []);
 
   const startRecorder = useCallback((stream: MediaStream) => {
-    const mimeType = pickMimeType();
-    const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-    recorderRef.current = recorder;
-    chunksRef.current = [];
-    segmentStartRef.current = Date.now();
-    hadVoiceRef.current = false;
-    chpSpokeRef.current = false;
+    const attempt = (mimeType: string | undefined) => {
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      recorderRef.current = recorder;
+      chunksRef.current = [];
+      segmentStartRef.current = Date.now();
+      hadVoiceRef.current = false;
+      chpSpokeRef.current = false;
 
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunksRef.current.push(e.data);
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const durationMs = Date.now() - segmentStartRef.current;
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        const hadVoice = hadVoiceRef.current;
+        const chpSpoke = chpSpokeRef.current;
+        closingRef.current = false;
+
+        // Only emit a segment that actually contains speech. Silence costs an API call and
+        // returns INSUFFICIENT_AUDIO_ACTIVITY, which would surface to the CHP as an error she
+        // cannot act on.
+        if (hadVoice && durationMs >= MIN_SEGMENT_MS && blob.size > 0) {
+          const index = segmentIndexRef.current;
+          segmentIndexRef.current += 1;
+          setSegmentCount(index + 1);
+          onSegmentRef.current({ blob, durationMs, index, chpSpokeDuring: chpSpoke });
+        }
+
+        if (stoppingRef.current) {
+          cleanup();
+          setState("idle");
+          setElapsedMs(0);
+          return;
+        }
+        // Not final — open the next segment straight away. She never sees this happen.
+        if (streamRef.current) startRecorder(streamRef.current);
+      };
+
+      recorder.start(250);
     };
 
-    recorder.onstop = () => {
-      const durationMs = Date.now() - segmentStartRef.current;
-      const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
-      const hadVoice = hadVoiceRef.current;
-      const chpSpoke = chpSpokeRef.current;
-      closingRef.current = false;
-
-      // Only emit a segment that actually contains speech. Silence costs an API call and returns
-      // INSUFFICIENT_AUDIO_ACTIVITY, which would surface to the CHP as an error she cannot act on.
-      if (hadVoice && durationMs >= MIN_SEGMENT_MS && blob.size > 0) {
-        const index = segmentIndexRef.current;
-        segmentIndexRef.current += 1;
-        setSegmentCount(index + 1);
-        onSegmentRef.current({ blob, durationMs, index, chpSpokeDuring: chpSpoke });
-      }
-
-      if (stoppingRef.current) {
+    // Some devices report a mimeType as supported (MediaRecorder.isTypeSupported) but still
+    // throw NotSupportedError the moment encoding actually starts — seen in the wild, not just in
+    // theory. Retry once with no explicit mimeType, letting the browser pick whatever it can
+    // actually record, before giving up.
+    try {
+      attempt(pickMimeType());
+    } catch {
+      try {
+        attempt(undefined);
+      } catch {
+        // Both attempts failed: this device cannot record here. Fail loudly and visibly — an
+        // uncaught throw at this point would otherwise surface as a silent no-op in production,
+        // where she taps to record and nothing ever happens.
         cleanup();
-        setState("idle");
-        setElapsedMs(0);
-        return;
+        setState("unsupported");
       }
-      // Not final — open the next segment straight away. She never sees this happen.
-      if (streamRef.current) startRecorder(streamRef.current);
-    };
-
-    recorder.start(250);
+    }
   }, [cleanup]);
 
   const start = useCallback(async () => {

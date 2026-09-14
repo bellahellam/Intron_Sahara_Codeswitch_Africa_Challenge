@@ -36,6 +36,10 @@ const config: Config = {
         slideUp:  { from: { opacity:"0", transform:"translateY(8px)" }, to: { opacity:"1", transform:"none" } },
         orbFloat: { "0%,100%": { transform:"translateY(0)" }, "50%": { transform:"translateY(-5px)" } },
         shimmer:  { "0%": { backgroundPosition:"-600px 0" }, "100%": { backgroundPosition:"600px 0" } },
+        dotBounce: {
+          "0%,80%,100%": { transform:"translateY(0)", opacity:"0.4" },
+          "40%":         { transform:"translateY(-4px)", opacity:"1" },
+        },
       },
       animation: {
         "pulse-halo": "pulseHalo 1.4s ease-in-out infinite",
@@ -45,6 +49,7 @@ const config: Config = {
         "slide-up":   "slideUp  260ms ease both",
         "orb-float":  "orbFloat 5s ease-in-out infinite",
         "shimmer":    "shimmer  1.5s ease-in-out infinite",
+        "dot-bounce": "dotBounce 1s ease-in-out infinite",
       },
     },
   },

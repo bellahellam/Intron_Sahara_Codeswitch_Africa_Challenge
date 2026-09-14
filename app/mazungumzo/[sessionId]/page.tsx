@@ -63,6 +63,11 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
   const [pending, setPending] = useState(0);
   const [online, setOnline] = useState(true);
   const [micPrompt, setMicPrompt] = useState(false);
+  // True from the moment "Maliza ziara" is pressed until the review screen actually loads.
+  // Without this, the capture UI reverts to its pre-recording state the instant recorder.stop()
+  // fires — before the last segment has even finished uploading — and looks exactly like nothing
+  // was ever recorded.
+  const [finishing, setFinishing] = useState(false);
 
   // Segments must reach the server IN ORDER — the agent's coverage state is sequential, and a
   // turn that overtakes its predecessor would be scored against the wrong context.
@@ -174,6 +179,7 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
   }
 
   function finish() {
+    setFinishing(true);
     recorder.stop();
     // Let the last segment drain before moving on, so nothing she said is discarded.
     queueRef.current = queueRef.current.then(() => {
@@ -282,45 +288,61 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
 
       {/* Capture controls. One tap to begin, one to end. Nothing in between. */}
       <div className="space-y-4 px-4 pt-6">
-        {recorder.state === "denied" && <ErrorCard sw={COPY.micDenied.sw} en={COPY.micDenied.en} />}
-        {recorder.state === "unsupported" && (
-          <ErrorCard
-            sw="Kivinjari hiki hakiwezi kurekodi sauti. Tumia Chrome kwenye Android."
-            en="This browser cannot record audio. Use Chrome on Android."
-          />
-        )}
-
-        {micPrompt && !recorder.recording && (
-          <div className="card space-y-3">
-            <p className="text-neutral-900">{COPY.micPermission.sw}</p>
-            <p className="gloss">{COPY.micPermission.en}</p>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => {
-                setMicPrompt(false);
-                recorder.start();
-              }}
-            >
-              Sawa
-            </button>
+        {finishing ? (
+          // recorder.recording is already false by the time this renders (stop() flips it
+          // instantly), but she hasn't reached Kagua yet — the last segment is still uploading.
+          // Without this card, the screen falls back to "Anza kusikiliza" and looks like the
+          // visit never happened.
+          <div className="card flex items-center gap-3">
+            <span aria-hidden className="animate-pulse-halo" style={{ width: 9, height: 9, borderRadius: "50%", background: "#7C3AED", flexShrink: 0 }} />
+            <div>
+              <p className="text-neutral-900">{COPY.states.finishingVisit.sw}</p>
+              <p className="gloss">{COPY.states.finishingVisit.en}</p>
+            </div>
           </div>
-        )}
+        ) : (
+          <>
+            {recorder.state === "denied" && <ErrorCard sw={COPY.micDenied.sw} en={COPY.micDenied.en} />}
+            {recorder.state === "unsupported" && (
+              <ErrorCard
+                sw="Kivinjari hiki hakiwezi kurekodi sauti. Tumia Chrome kwenye Android."
+                en="This browser cannot record audio. Use Chrome on Android."
+              />
+            )}
 
-        <ListeningControl
-          recording={recorder.recording}
-          voiceActive={recorder.voiceActive}
-          level={recorder.level}
-          elapsed={formatElapsed(recorder.elapsedMs)}
-          lowLevel={recorder.lowLevelHint}
-          busy={pending > 0}
-          onStart={() => (micPrompt ? recorder.start() : setMicPrompt(true))}
-          onStop={finish}
-          probe={probe}
-          screeningComplete={screeningComplete}
-          onProbeTap={() => recorder.markSpeaking()}
-          onProbeSkip={() => setProbe(null)}
-        />
+            {micPrompt && !recorder.recording && (
+              <div className="card space-y-3">
+                <p className="text-neutral-900">{COPY.micPermission.sw}</p>
+                <p className="gloss">{COPY.micPermission.en}</p>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => {
+                    setMicPrompt(false);
+                    recorder.start();
+                  }}
+                >
+                  Sawa
+                </button>
+              </div>
+            )}
+
+            <ListeningControl
+              recording={recorder.recording}
+              voiceActive={recorder.voiceActive}
+              level={recorder.level}
+              elapsed={formatElapsed(recorder.elapsedMs)}
+              lowLevel={recorder.lowLevelHint}
+              busy={pending > 0}
+              onStart={() => (micPrompt ? recorder.start() : setMicPrompt(true))}
+              onStop={finish}
+              probe={probe}
+              screeningComplete={screeningComplete}
+              onProbeTap={() => recorder.markSpeaking()}
+              onProbeSkip={() => setProbe(null)}
+            />
+          </>
+        )}
       </div>
     </main>
   );

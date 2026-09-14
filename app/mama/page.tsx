@@ -205,6 +205,7 @@ export default function MotherIdentity() {
         <PrimaryButton
           onClick={() => startSession()}
           disabled={!canContinue || busy}
+          busy={busy}
           disabledReason={!canContinue ? "Andika jina, au chagua 'Bila jina'." : undefined}
         >
           {busy ? "Inaanzisha..." : COPY.buttons.continue.sw}

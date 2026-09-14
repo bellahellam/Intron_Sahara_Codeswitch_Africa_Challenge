@@ -97,6 +97,13 @@ export default function Result({ params }: { params: Promise<{ recordId: string 
           <p className="text-sm text-neutral-700">{referral.reasonSw}</p>
           <p className="gloss">{referral.reason}</p>
 
+          {/* Says what's true and checkable — nothing to send today — without claiming "no
+              risk": a negative screen on an unvalidated instrument is not evidence of absence
+              (route.ts's own reasoning). This is the line that answers "am I done here?" */}
+          {!needsReferral && (
+            <p className="mt-1 text-sm font-semibold text-success">{COPY.noReferralToday.sw}</p>
+          )}
+
           {data.risk.flagged && (
             <p className="mt-1 flex items-start gap-2 text-xs font-medium text-danger">
               <span aria-hidden>!</span>

@@ -300,6 +300,7 @@ export default function Review({ params }: { params: Promise<{ sessionId: string
           <PrimaryButton
             onClick={toBackRead}
             disabled={unresolvedAmber.length > 0 || unresolvedContested.length > 0 || busy}
+            busy={busy}
             disabledReason={
               unresolvedContested.length > 0
                 ? COPY.disabledReasons.contestedPending.sw
@@ -311,8 +312,8 @@ export default function Review({ params }: { params: Promise<{ sessionId: string
             {busy ? "Inaandaa..." : COPY.buttons.confirmAndRead.sw}
           </PrimaryButton>
         ) : (
-          <PrimaryButton onClick={submit} disabled={busy}>
-            {busy ? "Inahifadhi..." : COPY.buttons.sendReferral.sw}
+          <PrimaryButton onClick={submit} disabled={busy} busy={busy}>
+            {busy ? "Inahifadhi..." : COPY.buttons.finishScreening.sw}
           </PrimaryButton>
         )}
       </div>

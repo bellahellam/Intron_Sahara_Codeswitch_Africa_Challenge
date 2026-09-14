@@ -54,6 +54,11 @@ export const COPY = {
     confirm: { sw: "Thibitisha", en: "Confirm" },
     neither: { sw: "Hakuna", en: "Neither" },
     confirmAndRead: { sw: "Thibitisha na soma kwa mama", en: "Confirm and read to the mother" },
+    /** Kagua's completion button. Not "Tuma rufaa": the tier isn't computed until /api/complete
+     *  runs, right after this tap, so this button cannot yet know whether a referral is coming.
+     *  Labelling it "Send referral" regardless of outcome is what makes every screening feel
+     *  like it ends in a referral, even the ones that don't. */
+    finishScreening: { sw: "Maliza uchunguzi", en: "Finish screening" },
     sendReferral: { sw: "Tuma rufaa", en: "Send referral" },
     sendReferralAnyway: { sw: "Tuma rufaa mwenyewe", en: "Send referral yourself" },
     copy: { sw: "Nakili", en: "Copy" },
@@ -67,6 +72,13 @@ export const COPY = {
   },
 
   followUpVisit: { sw: "Ziara ya kufuatilia", en: "Follow-up visit" },
+  /** Matokeo, chp_followup tier only. Deliberately says "today", not "no risk" — a negative
+   *  screen on an unvalidated instrument is not evidence of absence (route.ts), so the product
+   *  never claims risk-free. What IS true and worth saying plainly: nothing needs sending now. */
+  noReferralToday: {
+    sw: "Hakuna rufaa ya haraka inayohitajika leo.",
+    en: "No urgent referral is needed today.",
+  },
 
   /** §9.2 step 4. Four short sentences, by design: a long script is a script that gets skipped. */
   consentScript: {
@@ -109,6 +121,12 @@ export const COPY = {
   noMoreQuestions: {
     sw: "Hakuna swali lingine. Endelea kuongea naye kama unataka.",
     en: "No more questions. Keep talking with her if you want.",
+  },
+  /** Shown right after Ruka, before the next segment brings a new suggestion — distinct from
+   *  noMoreQuestions so a brief quiet moment never reads as the screening being over. */
+  noQuestionPending: {
+    sw: "Hakuna swali kwa sasa. Endelea kuongea naye.",
+    en: "Nothing suggested right now. Keep talking with her.",
   },
 
   /** §15.6, shown in context at the first record tap — never at launch. */
@@ -161,6 +179,10 @@ export const COPY = {
       en: "Listening. Talk with her normally — you do not need to press anything.",
     },
     recording: { sw: "Inarekodi...", en: "Recording" },
+    finishingVisit: {
+      sw: "Inamaliza ziara na kuhifadhi mazungumzo...",
+      en: "Finishing the visit and saving the conversation...",
+    },
     nearLimit: { sw: "Sekunde 10 zimebaki", en: "10 seconds left" },
     asr: { sw: "Inasikiliza...", en: "Listening" },
     extracting: { sw: "Inaelewa...", en: "Understanding" },
