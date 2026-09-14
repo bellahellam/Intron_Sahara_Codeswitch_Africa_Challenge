@@ -30,6 +30,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return extraction.items ?? [];
   });
 
+  // `extractionJson` is null for two different reasons that must not be conflated: a genuine
+  // extraction failure (both LLM attempts failed — orchestrator.ts sets extractionFailed: true),
+  // or the safety scan correctly short-circuiting extraction entirely on an escalating turn
+  // (extractionFailed: false, by design — see processTurn's safety.hit branch). Neither is
+  // persisted per turn, so this infers it: a safety short-circuit can only ever be the turn that
+  // caused the session to escalate, which — because the client stops recording immediately on
+  // ESCALATE — is always the session's last turn. A null turn anywhere else is a real failure.
+  const lastIdx = session.turns.length - 1;
+  const extractionFailedCount = session.turns.filter((t, i) => {
+    if (t.extractionJson !== null) return false;
+    const isLikelySafetySkip = session.escalated && i === lastIdx;
+    return !isLikelySafetySkip;
+  }).length;
+
   return NextResponse.json({
     id: session.id,
     motherName: session.mother.displayName,
@@ -40,6 +54,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     coverage: fromJsonColumn(session.coverageJson, emptyCoverage()),
     languageProfile: fromJsonColumn(session.languageProfileJson, null),
     turnCount: session.turns.length,
+    extractionFailedCount,
     items,
   });
 }

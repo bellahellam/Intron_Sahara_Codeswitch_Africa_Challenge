@@ -41,6 +41,10 @@ export default function Review({ params }: { params: Promise<{ sessionId: string
   // extraction ever runs, so zero scored items is expected there, not a failure). Matokeo goes on
   // to show facility_urgent for exactly this session, which read as a flat contradiction.
   const [escalated, setEscalated] = useState(false);
+  // A turn that genuinely failed to process (LLM timeout/error, not a safety short-circuit —
+  // see /api/session/[id]'s heuristic). Without this, a failed turn looks identical to a
+  // conversation where nothing relevant was ever said.
+  const [extractionFailedCount, setExtractionFailedCount] = useState(0);
   const [stage, setStage] = useState<Stage>("confirm");
   const [backRead, setBackRead] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,6 +59,7 @@ export default function Review({ params }: { params: Promise<{ sessionId: string
           setItems(d.items ?? []);
           if (d.coverage) setCoverage(d.coverage);
           setEscalated(d.escalated === true);
+          setExtractionFailedCount(typeof d.extractionFailedCount === "number" ? d.extractionFailedCount : 0);
         }
         setLoading(false);
       })
@@ -187,6 +192,25 @@ export default function Review({ params }: { params: Promise<{ sessionId: string
       <StepIndicator current={1} />
 
       <div className="flex-1 space-y-4 px-4 pt-4">
+        {/* Shown regardless of stage or whether other items exist — a failed turn can sit
+            alongside real evidence from the rest of the conversation, and either way she should
+            know part of it was never processed, not just told the record is complete. */}
+        {extractionFailedCount > 0 && (
+          <div className="rounded-md border border-warning bg-white px-3 py-2 text-sm">
+            <p className="font-medium text-warning">
+              ! {extractionFailedCount === 1
+                ? "Sehemu moja ya mazungumzo haikuweza kuchambuliwa."
+                : `Sehemu ${extractionFailedCount} za mazungumzo hazikuweza kuchambuliwa.`}
+            </p>
+            <p className="gloss not-italic">
+              {extractionFailedCount === 1
+                ? "One part of the conversation could not be processed."
+                : `${extractionFailedCount} parts of the conversation could not be processed.`}{" "}
+              Whatever she said there is not reflected below or in the score. Consider asking again.
+            </p>
+          </div>
+        )}
+
         {stage === "confirm" ? (
           <>
             {visible.length === 0 ? (

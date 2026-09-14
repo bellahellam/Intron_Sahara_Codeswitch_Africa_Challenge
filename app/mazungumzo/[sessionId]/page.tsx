@@ -75,6 +75,11 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
 
   // Segments must reach the server IN ORDER — the agent's coverage state is sequential.
   const queueRef = useRef<Promise<void>>(Promise.resolve());
+  // Set the moment a segment's response escalates, checked by finish() before it navigates.
+  // Needed because MediaRecorder.stop() is async: without this, finish() could already be
+  // mid-navigation to Kagua by the time the final segment — possibly the one with the
+  // disclosure that matters most — comes back as an escalation.
+  const justEscalatedRef = useRef(false);
 
   useEffect(() => {
     setOnline(navigator.onLine);
@@ -115,6 +120,7 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
 
         // Safety escalation fires regardless of which preset question we're on.
         if (data.decision.action === "ESCALATE" || data.safety.hit || data.riskFlag) {
+          justEscalatedRef.current = true;
           setEscalation({
             matchedTexts: [
               ...data.safety.hits.map((h) => h.matchedText),
@@ -163,6 +169,7 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId, acknowledged: true, quoteSuppressed }),
     }).catch(() => {});
+    justEscalatedRef.current = false;
     setEscalation(null);
   }
 
@@ -176,12 +183,20 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
     router.push("/imekamilika?reason=withdrawn");
   }
 
-  function finish() {
+  async function finish() {
     setFinishing(true);
-    recorder.stop();
-    queueRef.current = queueRef.current.then(() => {
-      router.push(`/kagua/${sessionId}`);
-    });
+    // Wait for the final segment to actually be handed to onSegment before touching queueRef —
+    // recorder.stop() used to be fire-and-forget here, so this navigation could get queued
+    // *before* the final segment (the one most likely to contain whatever she says last) was
+    // even enqueued for sending, let alone processed. That let this page navigate to Kagua out
+    // from under an escalation the final segment had just triggered.
+    await recorder.stop();
+    await queueRef.current;
+    // If that final segment escalated, the Escalation overlay is already showing (sendSegment
+    // set justEscalatedRef and escalation state before this promise resolved). Stay put — she
+    // acknowledges it normally, and finishing the visit happens afterward, not instead of it.
+    if (justEscalatedRef.current) return;
+    router.push(`/kagua/${sessionId}`);
   }
 
   return (

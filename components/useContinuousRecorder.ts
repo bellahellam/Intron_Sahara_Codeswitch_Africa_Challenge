@@ -33,8 +33,20 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/** Sahara's sync endpoint caps at 120 s. Close a segment well before that. */
-export const MAX_SEGMENT_MS = 100_000;
+/**
+ * Sahara's sync endpoint caps at 120 s, but that is not why this is set well below it.
+ *
+ * At 100s, a production test captured an entire disclosure — mood, sleep, appetite, not wanting
+ * to hold the baby, and an answer to the self-harm question — inside ONE 93.8s turn, because
+ * nothing paused long enough to close it naturally. The deterministic safety scan and the LLM's
+ * risk_flag both run per turn, once, on that turn's whole transcript: bundling this much into one
+ * opaque blob meant the lexicon had to match across far more text than any one phrase needs, and
+ * extraction had to process all of it inside one timeout window instead of several smaller ones.
+ * Neither caught it. A shorter ceiling forces a safety-scan pass more often when she doesn't
+ * pause — it cannot fix a lexicon gap or a slow extraction call, but it stops the whole
+ * conversation from riding on a single, oversized, unscanned-until-the-end turn.
+ */
+export const MAX_SEGMENT_MS = 45_000;
 
 /** Below this normalised amplitude counts as silence for segmentation purposes. */
 const SILENCE_LEVEL = 0.055;
@@ -86,6 +98,8 @@ export function useContinuousRecorder(onSegment: (segment: Segment) => void) {
   const hadVoiceRef = useRef(false);
   const closingRef = useRef(false);
   const stoppingRef = useRef(false);
+  /** Resolved once the final segment has been handed to onSegment — see `stop()`. */
+  const stopResolveRef = useRef<(() => void) | null>(null);
 
   const onSegmentRef = useRef(onSegment);
   onSegmentRef.current = onSegment;
@@ -153,6 +167,10 @@ export function useContinuousRecorder(onSegment: (segment: Segment) => void) {
           cleanup();
           setState("idle");
           setElapsedMs(0);
+          // The final segment above (if any) has already been handed to onSegment — safe for
+          // stop()'s caller to now check whatever that call decided (e.g. did it escalate).
+          stopResolveRef.current?.();
+          stopResolveRef.current = null;
           return;
         }
         // Not final — open the next segment straight away. She never sees this happen.
@@ -277,13 +295,25 @@ export function useContinuousRecorder(onSegment: (segment: Segment) => void) {
     rafRef.current = requestAnimationFrame(tick);
   }, [rotateSegment, startRecorder]);
 
-  /** End the visit. Flushes whatever is in the current segment. */
+  /**
+   * End the visit. Flushes whatever is in the current segment and returns a promise that
+   * resolves once that final segment has been handed to onSegment (not once it has finished
+   * *processing* — the caller still needs to await its own queue for that). Awaiting this before
+   * deciding what to do next matters: MediaRecorder.stop() is asynchronous, so a caller that
+   * doesn't wait can act (e.g. navigate away) before the final segment — which may be the one
+   * that discloses something serious — has even been queued for sending.
+   */
   const stop = useCallback(() => {
-    if (recorderRef.current && recorderRef.current.state !== "inactive") rotateSegment(true);
-    else {
-      cleanup();
-      setState("idle");
-    }
+    return new Promise<void>((resolve) => {
+      if (recorderRef.current && recorderRef.current.state !== "inactive") {
+        stopResolveRef.current = resolve;
+        rotateSegment(true);
+      } else {
+        cleanup();
+        setState("idle");
+        resolve();
+      }
+    });
   }, [cleanup, rotateSegment]);
 
   /** Abandon everything without emitting — used when consent is withdrawn mid-visit. */
