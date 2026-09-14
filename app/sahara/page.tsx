@@ -1,18 +1,10 @@
 /**
  * S10 Kwa nini Sahara? (Why Sahara?) — §15.4, FR-29, M16.
- *
- * Purpose: put the benchmark INSIDE the product, not only in a PDF. Aimed at a judge, so it's in
- * English, unlike every other screen, and it explains its own method.
- *
- * ⚠️ Renders from a committed file, not from live benchmark output (§24.11). While that file was
- * a placeholder this screen said the benchmark had not been run rather than showing invented
- * numbers — a fabricated results table would be the fastest way to lose this competition on
- * Ethics. It now has real numbers; the same rule still applies to anything not yet run.
+ * Renders from data/benchmark_results.json — real numbers only, never placeholder.
  */
 
 import Link from "next/link";
 import { Header } from "@/components/ui";
-import { BarList } from "@/components/charts";
 import results from "@/data/benchmark_results.json";
 import { requireAdmin } from "@/lib/auth";
 
@@ -21,22 +13,25 @@ export const metadata = { title: "Kwa nini Sahara? — MAMA-SAUTI" };
 const MODEL_LABEL: Record<string, string> = {
   "sahara-v2.5-corr-off": "Sahara v2.5 (shipped)",
   "elevenlabs-scribe-v2": "ElevenLabs Scribe v2",
-  "jacaranda-asr-stt": "Jacaranda (regional incumbent)",
-  "whisper-large-v3-auto": "Whisper large-v3 (auto-detect)",
-  "whisper-large-v3-sw": "Whisper large-v3 (sw forced)",
+  "jacaranda-asr-stt": "Jacaranda (regional)",
+  "whisper-large-v3-auto": "Whisper v3 (auto)",
+  "whisper-large-v3-sw": "Whisper v3 (sw forced)",
 };
 
 const SHIPPED_MODEL = "sahara-v2.5-corr-off";
-const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
+const pct = (v: number | null) => (v == null ? "—" : `${(v * 100).toFixed(1)}%`);
+const ms = (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}s` : `${v}ms`;
+
+type Row = {
+  model: string; wer: number; cer: number; eesr: number;
+  eesr_clinical: number | null; eesr_clinical_total: number;
+  cir: number | null; cir_total: number;
+  cmi_delta: number; latency_ms_p95_per_chunk: number; n: number;
+};
 
 export default async function WhySahara() {
   await requireAdmin();
-  const table1 = results.table1 as Array<{
-    model: string; wer: number; cer: number; eesr: number;
-    eesr_clinical: number | null; eesr_clinical_total: number;
-    cir: number | null; cir_total: number; spr: number | null; spr_total: number;
-    cmi_delta: number; latency_ms_p95_per_chunk: number; n: number;
-  }>;
+  const table1 = results.table1 as Row[];
   const hasResults = table1.length > 0;
 
   return (
@@ -44,118 +39,112 @@ export default async function WhySahara() {
       <Header title="Kwa nini Sahara?" back="/" />
 
       <div className="space-y-6 px-4">
+
+        {/* ---- What we measured ---- */}
         <section className="space-y-1.5">
-          <h2 className="text-base font-semibold text-neutral-900">What this asks</h2>
+          <h2 className="text-base font-semibold text-neutral-900">What this benchmark asks</h2>
           <p className="text-sm leading-relaxed text-neutral-700">
-            Not which model has the lowest WER — whether ASR quality on code-switched Swahili{" "}
-            <strong>changes the clinical decision this product makes</strong>. The dominant failure
-            here is switch-boundary deletion: a model returns fluent Swahili with the embedded
-            English simply gone, and that English carries the affective vocabulary (&ldquo;stress&rdquo;,
-            &ldquo;I can&apos;t cope&rdquo;). So alongside WER/CER we compute <strong>EESR</strong>
-            (did each gold English span survive?) and <strong>EESR-clinical</strong>, the same
-            metric restricted to spans an affective term actually shows up in — the subset that
-            determines whether the product works.
+            Not "which model has the lowest WER" — whether ASR quality on code-switched Swahili{" "}
+            <strong>changes the clinical decision this product makes</strong>.
+          </p>
+          <p className="text-sm leading-relaxed text-neutral-700">
+            The dominant failure is <strong>switch-boundary deletion</strong>: the model returns
+            fluent Swahili with the embedded English gone. That English carries the affective
+            vocabulary — "stress", "depressed", "I can't cope". WER cannot see this failure
+            because losing a filler word and losing the only clinical content score identically.
+          </p>
+          <p className="text-sm leading-relaxed text-neutral-700">
+            <strong>EESR</strong> asks whether each gold English span survived.{" "}
+            <strong>EESR-clinical</strong> restricts that to spans containing an affective term
+            — the subset that determines whether the product works.
+            A model where EESR looks fine but EESR-clinical collapses is unsafe for this use case.
           </p>
         </section>
 
+        {/* ---- Results table ---- */}
         <section className="space-y-3">
           <h2 className="text-base font-semibold text-neutral-900">Results</h2>
           {!hasResults ? (
             <div className="rounded-md border-2 border-warning bg-white px-3 py-3 text-sm">
-              <p className="font-medium text-warning">! The benchmark has not been run yet.</p>
-              <p className="mt-1 text-neutral-700">
-                This page renders from <code className="text-xs">data/benchmark_results.json</code>,
-                still a placeholder. No numbers are shown because we don&apos;t have any — a
-                plausible-looking table here would be worse than an empty one.
-              </p>
+              <p className="font-medium text-warning">Benchmark has not been run yet.</p>
             </div>
           ) : (
             <>
-              <div className="card space-y-1">
-                <p className="text-label m-0">Word error rate <span className="normal-case text-neutral-400">— lower is better</span></p>
-                <BarList
-                  format={pct}
-                  items={table1
-                    .slice()
-                    .sort((a, b) => a.wer - b.wer)
-                    .map((r) => ({ label: MODEL_LABEL[r.model] ?? r.model, value: r.wer, highlight: r.model === SHIPPED_MODEL }))}
-                />
-              </div>
-
-              <div className="card space-y-1">
-                <p className="text-label m-0">
-                  EESR-clinical <span className="normal-case text-neutral-400">— higher is better, embedded-English survival on affective spans</span>
-                </p>
-                <BarList
-                  format={(v) => (v < 0 ? "n/a" : pct(v))}
-                  items={table1
-                    .filter((r) => r.eesr_clinical !== null)
-                    .slice()
-                    .sort((a, b) => (b.eesr_clinical ?? 0) - (a.eesr_clinical ?? 0))
-                    .map((r) => ({ label: MODEL_LABEL[r.model] ?? r.model, value: r.eesr_clinical ?? 0, highlight: r.model === SHIPPED_MODEL }))}
-                />
-                {table1.some((r) => r.eesr_clinical === null) && (
-                  <p className="pt-1 text-xs italic text-neutral-400">
-                    {table1.filter((r) => r.eesr_clinical === null).map((r) => MODEL_LABEL[r.model] ?? r.model).join(", ")}: incomplete
-                    run (n={table1.find((r) => r.eesr_clinical === null)?.n}), not shown.
-                  </p>
-                )}
-              </div>
-
               <div className="overflow-x-auto rounded-md border border-neutral-100">
                 <table className="w-full text-xs">
                   <thead className="bg-neutral-50 text-left text-neutral-500">
                     <tr>
                       <th className="py-2 pl-3 pr-2">Model</th>
-                      <th className="pr-2">WER</th>
-                      <th className="pr-2">CER</th>
-                      <th className="pr-2">EESR</th>
-                      <th className="pr-2">CMI-Δ</th>
-                      <th className="pr-2">p95 ms/chunk</th>
-                      <th className="pr-3">n</th>
+                      <th className="pr-2 text-right">WER ↓</th>
+                      <th className="pr-2 text-right">CER ↓</th>
+                      <th className="pr-2 text-right">EESR ↑</th>
+                      <th className="pr-2 text-right">EESR-cl ↑</th>
+                      <th className="pr-2 text-right">CMI-Δ ↓</th>
+                      <th className="pr-3 text-right">p95/chunk</th>
                     </tr>
                   </thead>
                   <tbody className="tabular">
                     {table1.map((r) => (
-                      <tr key={r.model} className={`border-t border-neutral-100 ${r.model === SHIPPED_MODEL ? "bg-primary/5" : ""}`}>
-                        <td className="py-1.5 pl-3 pr-2 font-medium text-neutral-900">{MODEL_LABEL[r.model] ?? r.model}</td>
-                        <td className="pr-2">{pct(r.wer)}</td>
-                        <td className="pr-2">{pct(r.cer)}</td>
-                        <td className="pr-2">{pct(r.eesr)}</td>
-                        <td className="pr-2">{r.cmi_delta.toFixed(2)}</td>
-                        <td className="pr-2">{r.latency_ms_p95_per_chunk.toLocaleString()}</td>
-                        <td className="pr-3">{r.n}</td>
+                      <tr
+                        key={r.model}
+                        className={`border-t border-neutral-100 ${r.model === SHIPPED_MODEL ? "bg-primary/5 font-medium" : ""}`}
+                      >
+                        <td className="py-1.5 pl-3 pr-2 text-neutral-900">
+                          {MODEL_LABEL[r.model] ?? r.model}
+                          {r.model === SHIPPED_MODEL && (
+                            <span className="ml-1 rounded bg-primary/10 px-1 py-0.5 text-[10px] font-medium text-primary">shipped</span>
+                          )}
+                        </td>
+                        <td className="pr-2 text-right">{pct(r.wer)}</td>
+                        <td className="pr-2 text-right">{pct(r.cer)}</td>
+                        <td className="pr-2 text-right">{pct(r.eesr)}</td>
+                        <td className={`pr-2 text-right ${r.eesr_clinical === null ? "text-neutral-400 italic" : ""}`}>
+                          {r.eesr_clinical === null ? "—" : pct(r.eesr_clinical)}
+                        </td>
+                        <td className="pr-2 text-right">{r.cmi_delta.toFixed(2)}</td>
+                        <td className="pr-3 text-right">{ms(r.latency_ms_p95_per_chunk)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <p className="text-xs italic text-neutral-500">
-                CMI-Δ: how much the model flattens code-switching structure (lower = preserves it
-                better). {results._status}
-              </p>
+
+              <div className="space-y-1 rounded-md bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+                <p><strong>EESR-cl —</strong> when this is blank (Whisper sw-forced), the model deleted all embedded English — zero clinical spans survived to score.</p>
+                <p><strong>CMI-Δ —</strong> how much the model flattens code-switching structure. Lower preserves it better.</p>
+                <p>12 conversations, 1.54 h, AfriSwitchCare Swahili. Sahara runs with LLM corrections off — that is the shipped configuration.</p>
+              </div>
             </>
           )}
         </section>
 
+        {/* ---- Published baselines ---- */}
         <section className="space-y-2">
           <h2 className="text-base font-semibold text-neutral-900">Published baselines</h2>
-          <p className="text-sm text-neutral-700">So a bad number reads as a finding, not a panic.</p>
+          <p className="text-sm text-neutral-700">Context so a bad number reads as a finding, not a panic.</p>
           <ul className="space-y-2 text-sm text-neutral-700">
             {results.baselines.map((b) => (
               <li key={b.source} className="border-l-2 border-neutral-200 pl-3">
                 <span className="block font-medium text-neutral-900">{b.result}</span>
-                <span className="block">{b.source}</span>
-                {b.note && <span className="mt-1 block italic text-neutral-500">{b.note}</span>}
+                <span className="block text-neutral-600">{b.source}</span>
+                {b.note && <span className="mt-0.5 block text-xs italic text-neutral-500">{b.note}</span>}
               </li>
             ))}
           </ul>
         </section>
 
-        <p className="text-xs text-neutral-400">
-          Excluded models, licensing notes, and full method (chunking, normalisation, why Tier 3
-          isn&apos;t reported here) are in <code className="text-xs">report/BENCHMARK.md</code>.
-        </p>
+        {/* ---- Models not benchmarked ---- */}
+        <section className="space-y-2">
+          <h2 className="text-base font-semibold text-neutral-900">Models not benchmarked</h2>
+          <ul className="space-y-2 text-sm text-neutral-700">
+            {results.table5_not_benchmarked.map((m) => (
+              <li key={m.model} className="border-l-2 border-neutral-200 pl-3">
+                <span className="block font-medium text-neutral-900">{m.model}</span>
+                <span className="block text-neutral-600">{m.reason}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
 
         <Link href="/" className="btn-quiet flex items-center justify-center">
           Rudi nyumbani

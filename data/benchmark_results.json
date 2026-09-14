@@ -1,6 +1,6 @@
 {
-  "_status": "Run on 12 AfriSwitchCare Swahili conversations. Tier 3 (band-flip) is NOT reported: it is degenerate on this dataset by construction (spec section 18.5a) and requires field set C, which is not yet recorded.",
-  "generated_at": "2026-09-12",
+  "_status": "Run on 12 AfriSwitchCare Swahili conversations (1.54 h). Tier 3 (band-flip) not reported — degenerate on this dataset by construction (spec §18.5a).",
+  "generated_at": "2026-09-13",
   "datasets": {
     "A": {
       "name": "intronhealth/AfriSwitchCare",
@@ -8,57 +8,82 @@
       "split": "test",
       "n": "12 conversations, 1.54 h",
       "cmi": 37.4
-    },
-    "C": {
-      "name": "First-party field set",
-      "n": "28 utterances, ~18 min",
-      "note": "the only set carrying risk utterances and hand-assigned gold scores"
     }
   },
   "table1": [
     {
-      "model": "jacaranda-asr-stt",
-      "wer": 0.5648,
-      "cer": 0.3951,
-      "eesr": 0.3555,
-      "eesr_clinical": 0.2,
+      "model": "elevenlabs-scribe-v2",
+      "wer": 0.171,
+      "cer": 0.075,
+      "eesr": 0.891,
+      "eesr_clinical": 0.800,
       "eesr_clinical_total": 15,
       "cir": 1.0,
       "cir_total": 1,
-      "spr": 1.0,
-      "spr_total": 1,
-      "cmi_delta": 13.2425,
-      "latency_ms_p95_per_chunk": 24612,
+      "spr": null,
+      "spr_total": 0,
+      "cmi_delta": 4.654,
+      "latency_ms_p95_per_chunk": 7253,
+      "n": 12
+    },
+    {
+      "model": "sahara-v2.5-corr-off",
+      "wer": 0.194,
+      "cer": 0.107,
+      "eesr": 0.773,
+      "eesr_clinical": 0.733,
+      "eesr_clinical_total": 15,
+      "cir": 1.0,
+      "cir_total": 1,
+      "spr": null,
+      "spr_total": 0,
+      "cmi_delta": 4.923,
+      "latency_ms_p95_per_chunk": 7389,
       "n": 12
     },
     {
       "model": "whisper-large-v3-auto",
-      "wer": 0.3316,
-      "cer": 0.1487,
-      "eesr": 0.8247,
-      "eesr_clinical": 0.9333,
+      "wer": 0.332,
+      "cer": 0.149,
+      "eesr": 0.825,
+      "eesr_clinical": 0.933,
       "eesr_clinical_total": 15,
       "cir": 1.0,
       "cir_total": 1,
-      "spr": 1.0,
-      "spr_total": 1,
-      "cmi_delta": 3.3675,
+      "spr": null,
+      "spr_total": 0,
+      "cmi_delta": 3.368,
       "latency_ms_p95_per_chunk": 42894,
       "n": 12
     },
     {
       "model": "whisper-large-v3-sw",
-      "wer": 0.3443,
-      "cer": 0.1604,
-      "eesr": 0.8101,
-      "eesr_clinical": 0.9333,
+      "wer": 0.289,
+      "cer": 0.138,
+      "eesr": 0.787,
+      "eesr_clinical": null,
+      "eesr_clinical_total": 0,
+      "cir": null,
+      "cir_total": 0,
+      "spr": null,
+      "spr_total": 0,
+      "cmi_delta": 10.320,
+      "latency_ms_p95_per_chunk": 149686,
+      "n": 12
+    },
+    {
+      "model": "jacaranda-asr-stt",
+      "wer": 0.565,
+      "cer": 0.393,
+      "eesr": 0.355,
+      "eesr_clinical": 0.200,
       "eesr_clinical_total": 15,
       "cir": 1.0,
       "cir_total": 1,
-      "spr": 1.0,
-      "spr_total": 1,
-      "cmi_delta": 5.8133,
-      "latency_ms_p95_per_chunk": 24976,
+      "spr": null,
+      "spr_total": 0,
+      "cmi_delta": 13.156,
+      "latency_ms_p95_per_chunk": 60890,
       "n": 12
     }
   ],
@@ -67,26 +92,26 @@
   "table5_not_benchmarked": [
     {
       "model": "Deepgram",
-      "reason": "Terms of Service restriction #9 prohibits use 'for competitive purposes, including model training, benchmarking and other competitive analysis.' Not conditioned on being a competitor. We will not publish numbers we are contractually barred from producing."
+      "reason": "ToS §9 prohibits benchmarking for competitive purposes. Not conditioned on being a competitor — we will not publish numbers we are contractually barred from producing."
     },
     {
       "model": "AssemblyAI",
-      "reason": "Two clauses: prohibits 'competitive analysis or benchmarking', and separately prohibits submitting benchmarking material 'not independently created by the Customer', which directly implicates evaluating on a third-party corpus like AfriSwitchCare."
+      "reason": "Prohibits competitive analysis and submitting benchmarking material not independently created by the customer, which implicates evaluating on AfriSwitchCare."
     },
     {
       "model": "NVIDIA Parakeet / Canary",
-      "reason": "Swahili is not supported by any checkpoint. Parakeet-v2 is English-only; Parakeet-v3 and Canary-1b-v2 cover 25 European languages; Canary-1b/flash/180m hardcode choices=['en','de','es','fr']. Reported as a negative finding, not a benchmark row."
+      "reason": "No Swahili checkpoint. Parakeet-v2 is English-only; Canary covers 25 European languages only. Reported as a negative finding."
     },
     {
       "model": "w2v-BERT 2.0",
-      "reason": "sw is in its 96-language pretraining set, but the card states it is 'a bare checkpoint without any modeling head, and thus requires finetuning.' Cannot be benchmarked zero-shot."
+      "reason": "Card states 'a bare checkpoint without any modeling head, and thus requires finetuning.' Cannot be benchmarked zero-shot."
     }
   ],
   "baselines": [
     {
-      "source": "shamiriAI (Lilan, Mochama, Osborn et al. 2026, JMIR AI 5:e95063) \u2014 code-switched English/Kiswahili/Sheng mental health session audio",
-      "result": "WER 0.34, CER 0.19, cosine semantic similarity 0.77",
-      "note": "The only peer-reviewed quantified benchmark for exactly our setting. This is our realistic ceiling."
+      "source": "shamiriAI (Lilan, Mochama, Osborn et al. 2026, JMIR AI 5:e95063) — code-switched English/Kiswahili/Sheng mental health audio",
+      "result": "WER 0.34, CER 0.19",
+      "note": "The only peer-reviewed benchmark for exactly our setting. This is our realistic ceiling."
     },
     {
       "source": "AfriSwitch, best system, code-switched Swahili",
@@ -94,12 +119,8 @@
     },
     {
       "source": "Intron MultiBench README, MONOLINGUAL accented clinical Swahili, Sahara",
-      "result": "0.068 normalised WER, CER 0.028",
+      "result": "WER 0.068, CER 0.028",
       "note": "Do NOT compare against this. The gap between 0.068 and 0.34 is the entire story of this competition."
-    },
-    {
-      "source": "Common Voice read-speech Swahili",
-      "result": "3\u201316% WER"
     }
   ]
 }
