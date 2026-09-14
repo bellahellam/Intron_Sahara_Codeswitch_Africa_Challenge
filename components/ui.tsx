@@ -176,7 +176,7 @@ export function AmplitudeMeter({ level, lowHint }: { level: number; lowHint: boo
  */
 export function ListeningControl({
   recording, voiceActive, level, elapsed, lowLevel, busy, onStart, onStop,
-  probe, screeningComplete, onProbeTap, onProbeSkip,
+  probe, screeningComplete, onProbeTap, onProbeSkip, hideWhisper,
 }: {
   recording: boolean; voiceActive: boolean; level: number; elapsed: string;
   lowLevel: boolean; busy: boolean; onStart: () => void; onStop: () => void;
@@ -191,6 +191,11 @@ export function ListeningControl({
   /** Ruka: clears this suggestion from the dock. Equal-weight alternative to asking it, not a
    *  fallback — §9.2 requires skipping to never read as the discouraged choice. */
   onProbeSkip?: () => void;
+  /** Suppresses the whole whisper slot — probe card, "no more questions" card, and the quiet
+   *  "nothing suggested" placeholder alike. For a caller (e.g. the preset-question MVP flow)
+   *  that renders its own question/complete UI elsewhere: without this, the two stack and
+   *  contradict each other, since `probe` and `screeningComplete` mean nothing there. */
+  hideWhisper?: boolean;
 }) {
   if (!recording) {
     return (
@@ -249,7 +254,7 @@ export function ListeningControl({
           equal-weight choices, just quieter than the old bordered card — tapping the question
           marks the segment as CHP speech, and Ruka is always right there beside it, not hidden
           in a menu or styled as the discouraged option. */}
-      {probe ? (
+      {!hideWhisper && (probe ? (
         <div style={{
           padding:"9px 11px", borderRadius:9,
           background:"#FDF8F2", borderLeft:"3px solid #D9B98E",
@@ -299,7 +304,7 @@ export function ListeningControl({
         <p style={{ margin:0, paddingLeft:2, fontStyle:"italic", fontSize:13, lineHeight:1.5, color:"#9AA6AC" }}>
           {COPY.noQuestionPending.sw} <span className="gloss">{COPY.noQuestionPending.en}</span>
         </p>
-      )}
+      ))}
 
       <button type="button" onClick={onStop} className="btn-primary">
         {COPY.buttons.endVisit.sw}

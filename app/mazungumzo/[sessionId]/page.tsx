@@ -372,9 +372,9 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
               busy={pending > 0}
               onStart={() => recorder.start()}
               onStop={finish}
-              // No LLM probe passed — question display is handled by the card above
-              probe={null}
-              screeningComplete={allQuestionsAsked}
+              // Question display and "all done" messaging are both handled by the preset-question
+              // card above — the whisper slot's probe/screeningComplete UI would just duplicate it.
+              hideWhisper
               onProbeTap={() => recorder.markSpeaking()}
             />
           </>
