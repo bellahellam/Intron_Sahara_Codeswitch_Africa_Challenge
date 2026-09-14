@@ -76,6 +76,12 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
   // Segments must reach the server IN ORDER — the agent's coverage state is sequential.
   const queueRef = useRef<Promise<void>>(Promise.resolve());
 
+  // Once escalation fires, the visit is latched: no further segment response may navigate,
+  // clear the modal, or advance the flow. The only way off the escalation screen is the CHP
+  // acknowledging it. This ref is read synchronously inside the async queue, where React state
+  // would be stale.
+  const escalatedRef = useRef(false);
+
   useEffect(() => {
     setOnline(navigator.onLine);
     const on = () => setOnline(true);
@@ -96,8 +102,18 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
       form.append("durationMs", String(segment.durationMs));
       if (segment.chpSpokeDuring) form.append("chpSpokeDuring", "true");
 
+      // Already escalated by an earlier segment — this is a trailing segment flushed by
+      // recorder.stop(). Do not send it, do not let its response touch any state. The
+      // escalation screen must stay exactly as it is until the CHP acknowledges it.
+      if (escalatedRef.current) return;
+
       try {
         const res = await fetch("/api/turn", { method: "POST", body: form });
+
+        // Re-check after the await: escalation may have fired on a segment that resolved while
+        // this request was in flight.
+        if (escalatedRef.current) return;
+
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           setError({
@@ -108,13 +124,11 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
         }
 
         const data: TurnResponse = await res.json();
-        setLastTurn(data);
-        setCoverage(data.coverage);
-        setItems((prev) => [...prev, ...data.items]);
-        setError(null);
 
-        // Safety escalation fires regardless of which preset question we're on.
+        // Safety escalation fires regardless of which preset question we're on. Check this
+        // BEFORE writing any other state, and latch it so nothing else can run afterwards.
         if (data.decision.action === "ESCALATE" || data.safety.hit || data.riskFlag) {
+          escalatedRef.current = true;
           setEscalation({
             matchedTexts: [
               ...data.safety.hits.map((h) => h.matchedText),
@@ -123,11 +137,19 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
             source: data.safety.hit ? "deterministic_lexicon" : "llm_risk_flag",
             failedClosed: data.safety.failedClosed,
           });
-          recorder.stop();
+          // Abort, not stop: stop() flushes a trailing segment that would post another turn.
+          // abort() drops everything in flight and emits nothing further.
+          recorder.abort();
           return;
         }
+
+        setLastTurn(data);
+        setCoverage(data.coverage);
+        setItems((prev) => [...prev, ...data.items]);
+        setError(null);
         // LLM-generated probes are ignored in MVP — we show preset questions only.
       } catch {
+        if (escalatedRef.current) return;
         setError({ sw: COPY.states.failedNetwork.sw, en: COPY.states.failedNetwork.en });
       }
     },
@@ -148,7 +170,8 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
   const recorder = useContinuousRecorder(onSegment);
 
   async function raiseManualFlag() {
-    recorder.stop();
+    escalatedRef.current = true;
+    recorder.abort();
     await fetch("/api/escalate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -164,6 +187,9 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
       body: JSON.stringify({ sessionId, acknowledged: true, quoteSuppressed }),
     }).catch(() => {});
     setEscalation(null);
+    // The screening still produced a record and an urgent referral. After the CHP has
+    // spoken with the mother, move to review so the referral can be sent.
+    router.push(`/kagua/${sessionId}`);
   }
 
   async function withdrawConsent() {
@@ -177,9 +203,12 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
   }
 
   function finish() {
+    // If we've escalated, the CHP is on the escalation screen — never navigate to review.
+    if (escalatedRef.current) return;
     setFinishing(true);
     recorder.stop();
     queueRef.current = queueRef.current.then(() => {
+      if (escalatedRef.current) return;
       router.push(`/kagua/${sessionId}`);
     });
   }
