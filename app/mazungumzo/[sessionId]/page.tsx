@@ -1,28 +1,28 @@
 "use client";
 
 /**
- * S4 Mazungumzo (Conversation) — the screen where the product lives.
+ * S4 Mazungumzo (Conversation) — MVP preset-question mode.
  *
- * TWO THINGS CHANGED FROM THE ORIGINAL SPEC, both because of the CHP rather than the engineering.
+ * WHAT CHANGED FOR MVP:
+ * The LLM-generated probe system is replaced with 5 preset evidence-based questions
+ * (lib/preset-questions.ts). The CHP records continuously through all 5 questions;
+ * she advances manually with "Swali lijalo" after each patient response. After the
+ * last question the session ends with "Maliza ziara".
  *
- * 1. CAPTURE IS CONTINUOUS. She taps once at the start of the visit and once at the end. Segments
- *    close on silence, automatically. §10.1 chose tap-per-turn, and its reasoning about hand
- *    availability was right — but it put the phone in the middle of a conversation about self-harm,
- *    repeatedly, at the exact moments her attention belongs on the mother. See
- *    components/useContinuousRecorder.ts for what that costs and what stands in its place.
+ * The full agentic probe system (lib/agent/probe.ts) and the segment-by-segment
+ * real-time processing are retained — the continuous recorder still sends segments
+ * to /api/turn and builds up coverage state — but the DISPLAYED question is always
+ * the next preset, not whatever the LLM suggested.
  *
- * 2. NO NUMBERS ON HER SCREEN. No confidence values, no latencies, no model names, no chars-per-
- *    second. Confidence is still computed and still gates the amber confirmation — she sees the
- *    WORD ("Thibitisha") and never the number. Those belong on the admin view (lib/roles.ts).
- *
- * What she sees while a mother is speaking: the mother's own words, a shape showing how much of
- * the screening is covered, one suggested question, and the two controls she must never have to
- * hunt for — raise a risk flag, and finish.
+ * Why retain the turn pipeline: the safety scan (step 4) must still run on every
+ * segment. If item-9 content appears before the CHP reaches question 5, the
+ * escalation interrupt fires immediately.
  */
 
 import { useRouter } from "next/navigation";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { COPY } from "@/lib/copy";
+import { PRESET_QUESTIONS, TOTAL_QUESTIONS } from "@/lib/preset-questions";
 import { formatElapsed, useContinuousRecorder, type Segment } from "@/components/useContinuousRecorder";
 import { CoverageStrip, ErrorCard, Header, ListeningControl } from "@/components/ui";
 import { EvidenceCard, TranscriptDisclosure, type EvidenceItem } from "@/components/EvidenceCard";
@@ -53,24 +53,27 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
   const [items, setItems] = useState<EvidenceItem[]>([]);
   const [coverage, setCoverage] = useState<CoverageMap>(emptyCoverage());
   const [lastTurn, setLastTurn] = useState<TurnResponse | null>(null);
-  const [probe, setProbe] = useState<{ text: string; fixed: boolean } | null>({
-    text: COPY.openingQuestion.sw,
-    fixed: true,
-  });
-  const [screeningComplete, setScreeningComplete] = useState(false);
   const [escalation, setEscalation] = useState<EscalationTrigger | null>(null);
   const [error, setError] = useState<{ sw: string; en: string } | null>(null);
   const [pending, setPending] = useState(0);
   const [online, setOnline] = useState(true);
-  const [micPrompt, setMicPrompt] = useState(false);
-  // True from the moment "Maliza ziara" is pressed until the review screen actually loads.
-  // Without this, the capture UI reverts to its pre-recording state the instant recorder.stop()
-  // fires — before the last segment has even finished uploading — and looks exactly like nothing
-  // was ever recorded.
   const [finishing, setFinishing] = useState(false);
 
-  // Segments must reach the server IN ORDER — the agent's coverage state is sequential, and a
-  // turn that overtakes its predecessor would be scored against the wrong context.
+  // ── Preset question state ──────────────────────────────────────────────
+  // questionIndex tracks which question is currently displayed (0-based).
+  // After question 4 (the last), the "Maliza ziara" button replaces "Swali lijalo".
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const currentQuestion = PRESET_QUESTIONS[questionIndex];
+  const isLastQuestion = questionIndex >= TOTAL_QUESTIONS - 1;
+  const allQuestionsAsked = questionIndex >= TOTAL_QUESTIONS;
+
+  function advanceQuestion() {
+    if (questionIndex < TOTAL_QUESTIONS) {
+      setQuestionIndex((i) => i + 1);
+    }
+  }
+
+  // Segments must reach the server IN ORDER — the agent's coverage state is sequential.
   const queueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
@@ -110,6 +113,7 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
         setItems((prev) => [...prev, ...data.items]);
         setError(null);
 
+        // Safety escalation fires regardless of which preset question we're on.
         if (data.decision.action === "ESCALATE" || data.safety.hit || data.riskFlag) {
           setEscalation({
             matchedTexts: [
@@ -122,13 +126,7 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
           recorder.stop();
           return;
         }
-
-        if (data.decision.action === "COMPLETE") {
-          setProbe(null);
-          setScreeningComplete(true);
-        } else if (data.probe) {
-          setProbe({ text: data.probe.text, fixed: data.probe.fixed });
-        }
+        // LLM-generated probes are ignored in MVP — we show preset questions only.
       } catch {
         setError({ sw: COPY.states.failedNetwork.sw, en: COPY.states.failedNetwork.en });
       }
@@ -181,7 +179,6 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
   function finish() {
     setFinishing(true);
     recorder.stop();
-    // Let the last segment drain before moving on, so nothing she said is discarded.
     queueRef.current = queueRef.current.then(() => {
       router.push(`/kagua/${sessionId}`);
     });
@@ -199,9 +196,6 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
       )}
 
       {recorder.recording ? (
-        // The persistent session bar (§16.2). It says this is one continuous recording spanning
-        // the whole visit, not a recording per question — and it carries the risk flag, always
-        // one tap away, so it never has to compete with `Maliza ziara` at the bottom.
         <div style={{
           display:"flex", alignItems:"center", gap:10, minHeight:56, padding:"0 14px",
           background:"linear-gradient(105deg,#5B21B6 0%,#7C3AED 54%,#C026D3 100%)", color:"#fff", flexShrink:0,
@@ -239,7 +233,8 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
         </div>
       )}
 
-      <div className="flex-1 space-y-4 px-4">
+      <div className="flex-1 space-y-4 px-4 pt-4">
+        {/* Coverage */}
         <section>
           <p className="mb-2 text-xs uppercase tracking-wide text-neutral-500">
             Hali ya uchunguzi <span className="gloss normal-case">(coverage)</span>
@@ -247,23 +242,85 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
           <CoverageStrip coverage={coverage} />
         </section>
 
-        {/* The deletion hint is phrased as something SHE can act on. No cps, no threshold. */}
+        {/* ── Preset question card ── */}
+        {recorder.recording && !allQuestionsAsked && (
+          <div style={{
+            padding:"12px 14px", borderRadius:10,
+            background:"#FDF8F2", borderLeft:"3px solid #D9B98E",
+          }}>
+            {/* Question counter */}
+            <p style={{ margin:"0 0 6px", fontSize:10, letterSpacing:".06em", fontWeight:700, color:"#B09272", textTransform:"uppercase" }}>
+              Swali {questionIndex + 1} / {TOTAL_QUESTIONS}
+            </p>
+            {/* Question text */}
+            <p style={{ margin:0, fontStyle:"italic", fontSize:15, lineHeight:1.55, color:"#8C521F", fontWeight:500 }}>
+              {currentQuestion.sw}
+            </p>
+            <p style={{ margin:"4px 0 0", fontStyle:"italic", fontSize:12, color:"#B09272" }}>
+              {currentQuestion.en}
+            </p>
+            {/* Advance button */}
+            <div style={{ marginTop:10, display:"flex", justifyContent:"flex-end" }}>
+              {isLastQuestion ? (
+                <button
+                  type="button"
+                  onClick={advanceQuestion}
+                  style={{
+                    padding:"6px 14px", borderRadius:7, border:"1px solid #D9B98E",
+                    background:"#FDF8F2", color:"#8C521F",
+                    font:"600 12px Inter, system-ui, sans-serif", cursor:"pointer",
+                  }}
+                >
+                  Swali la mwisho limeulizwa ✓
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { recorder.markSpeaking(); advanceQuestion(); }}
+                  style={{
+                    padding:"6px 14px", borderRadius:7, border:"1px solid #D9B98E",
+                    background:"#FDF8F2", color:"#8C521F",
+                    font:"600 12px Inter, system-ui, sans-serif", cursor:"pointer",
+                  }}
+                >
+                  Swali lijalo →
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* After all questions have been asked */}
+        {recorder.recording && allQuestionsAsked && (
+          <div style={{
+            padding:"10px 14px", borderRadius:10,
+            background:"#F7F5FF", borderLeft:"3px solid #DCD2EE",
+          }}>
+            <p style={{ margin:0, fontSize:14, color:"#7D7691", fontStyle:"italic" }}>
+              Maswali yote yamekamilika. Unaweza kumaliza ziara.
+            </p>
+            <p style={{ margin:"2px 0 0", fontSize:12, color:"#A79DB8", fontStyle:"italic" }}>
+              All questions complete. You can end the visit.
+            </p>
+          </div>
+        )}
+
+        {/* Errors */}
         {lastTurn?.deletion.deletionSuspected && (
           <div className="rounded-md border border-warning bg-white px-3 py-2 text-sm">
             <p className="font-medium text-warning">! {COPY.states.deletionSuspected.sw}</p>
             <p className="gloss not-italic">{COPY.states.deletionSuspected.en}</p>
           </div>
         )}
-
         {lastTurn?.extractionFailed && (
           <ErrorCard
-            sw="Sehemu moja haikueleweka. Endelea kuongea naye — utaweza kuiandika baadaye."
-            en="One part could not be understood. Keep talking with her; you can enter it later."
+            sw="Sehemu moja haikueleweka. Endelea kuongea naye."
+            en="One part could not be understood. Keep talking with her."
           />
         )}
-
         {error && <ErrorCard sw={error.sw} en={error.en} />}
 
+        {/* Evidence cards */}
         {items.length === 0 ? (
           <p className="text-neutral-500">
             {recorder.recording ? COPY.states.listeningEmpty.sw : COPY.emptyStates.noEvidence.sw}
@@ -286,15 +343,11 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
         {lastTurn && <TranscriptDisclosure transcript={lastTurn.transcript} spans={lastTurn.languageSpans} />}
       </div>
 
-      {/* Capture controls. One tap to begin, one to end. Nothing in between. */}
+      {/* ── Capture controls ── */}
       <div className="space-y-4 px-4 pt-6">
         {finishing ? (
-          // recorder.recording is already false by the time this renders (stop() flips it
-          // instantly), but she hasn't reached Kagua yet — the last segment is still uploading.
-          // Without this card, the screen falls back to "Anza kusikiliza" and looks like the
-          // visit never happened.
           <div className="card flex items-center gap-3">
-            <span aria-hidden className="animate-pulse-halo" style={{ width: 9, height: 9, borderRadius: "50%", background: "#7C3AED", flexShrink: 0 }} />
+            <span aria-hidden className="animate-pulse-halo" style={{ width:9, height:9, borderRadius:"50%", background:"#7C3AED", flexShrink:0 }} />
             <div>
               <p className="text-neutral-900">{COPY.states.finishingVisit.sw}</p>
               <p className="gloss">{COPY.states.finishingVisit.en}</p>
@@ -310,23 +363,6 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
               />
             )}
 
-            {micPrompt && !recorder.recording && (
-              <div className="card space-y-3">
-                <p className="text-neutral-900">{COPY.micPermission.sw}</p>
-                <p className="gloss">{COPY.micPermission.en}</p>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => {
-                    setMicPrompt(false);
-                    recorder.start();
-                  }}
-                >
-                  Sawa
-                </button>
-              </div>
-            )}
-
             <ListeningControl
               recording={recorder.recording}
               voiceActive={recorder.voiceActive}
@@ -334,12 +370,12 @@ export default function Conversation({ params }: { params: Promise<{ sessionId: 
               elapsed={formatElapsed(recorder.elapsedMs)}
               lowLevel={recorder.lowLevelHint}
               busy={pending > 0}
-              onStart={() => (micPrompt ? recorder.start() : setMicPrompt(true))}
+              onStart={() => recorder.start()}
               onStop={finish}
-              probe={probe}
-              screeningComplete={screeningComplete}
+              // No LLM probe passed — question display is handled by the card above
+              probe={null}
+              screeningComplete={allQuestionsAsked}
               onProbeTap={() => recorder.markSpeaking()}
-              onProbeSkip={() => setProbe(null)}
             />
           </>
         )}
