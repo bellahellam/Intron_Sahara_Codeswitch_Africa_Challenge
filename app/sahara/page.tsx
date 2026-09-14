@@ -138,23 +138,19 @@ export default async function WhySahara() {
           )}
         </section>
 
-        <section className="space-y-2">
-          <h2 className="text-base font-semibold text-neutral-900">Published baselines</h2>
-          <p className="text-sm text-neutral-700">So a bad number reads as a finding, not a panic.</p>
-          <ul className="space-y-2 text-sm text-neutral-700">
-            {results.baselines.map((b) => (
-              <li key={b.source} className="border-l-2 border-neutral-200 pl-3">
-                <span className="block font-medium text-neutral-900">{b.result}</span>
-                <span className="block">{b.source}</span>
-                {b.note && <span className="mt-1 block italic text-neutral-500">{b.note}</span>}
-              </li>
-            ))}
-          </ul>
+        <section className="space-y-1.5">
+          <h2 className="text-base font-semibold text-neutral-900">Reading these numbers</h2>
+          <p className="text-sm leading-relaxed text-neutral-700">
+            WER alone picks the wrong model here: it treats a dropped filler word and a dropped
+            diagnosis the same way. EESR-clinical is the tiebreaker, since it only counts spans
+            that carry affective meaning, so a model that flattens code-switching (high CMI-Δ)
+            shows up as unsafe even when its WER looks fine. The highlighted row is what ships.
+          </p>
         </section>
 
         <p className="text-xs text-neutral-400">
-          Excluded models, licensing notes, and full method (chunking, normalisation, why Tier 3
-          isn&apos;t reported here) are in <code className="text-xs">report/BENCHMARK.md</code>.
+          Published baselines, excluded models, and full method are in{" "}
+          <code className="text-xs">report/BENCHMARK.md</code>.
         </p>
 
         <Link href="/" className="btn-quiet flex items-center justify-center">
