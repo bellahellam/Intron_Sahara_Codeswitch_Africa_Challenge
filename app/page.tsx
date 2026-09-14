@@ -119,7 +119,7 @@ export default function Home() {
         <p className="home-kicker">Postnatal screening desk</p>
         <h1 className="home-title">Screen with care, in her own words.</h1>
         <p className="home-description">
-          Voice screening for Kiswahili, English and Sheng. Each result remains linked to the words she used.
+          Voice screening for Kiswahili and English. Each result remains linked to the words she used.
         </p>
 
         {editingCode ? (

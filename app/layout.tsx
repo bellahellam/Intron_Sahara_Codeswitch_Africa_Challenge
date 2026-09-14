@@ -16,7 +16,7 @@ export const viewport: Viewport = {
 
 const workflow = [
   { number: "01", title: "Begin privately", body: "Set up a short screening with a mother, on her terms." },
-  { number: "02", title: "Listen naturally", body: "Kiswahili, English and Sheng can sit in the same answer." },
+  { number: "02", title: "Listen naturally", body: "Kiswahili and English can sit in the same answer." },
   { number: "03", title: "Review and refer", body: "Evidence stays connected to her words before a referral is prepared." },
 ];
 
