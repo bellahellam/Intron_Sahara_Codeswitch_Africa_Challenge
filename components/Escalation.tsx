@@ -151,6 +151,12 @@ export function Escalation({
               <p className="text-xs uppercase tracking-wide text-white/70">Msaada</p>
               {contacts
                 .filter((c) => !c.immediate_danger_only)
+                // Drop the per-CHU facility row when no number is configured — a dead row
+                // that only says "not configured" adds nothing on a crisis screen.
+                .filter((c) => {
+                  if (c.id !== "link_facility") return true;
+                  return Boolean(linkFacilityNumber ?? c.number);
+                })
                 .map((c) => (
                   <ContactRow
                     key={c.id}
