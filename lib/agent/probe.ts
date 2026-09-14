@@ -78,9 +78,14 @@ export async function generateProbe(input: {
 
   // FR-24a: on a denylist hit the string is regenerated once; on a second hit the surface falls
   // back to a fixed safe template and the event is logged.
+  //
+  // Deliberately given LESS time than extraction (orchestrator.ts), not more retries: the
+  // preset-question MVP flow (app/mazungumzo) discards whatever this call produces, so a slow
+  // attempt here only costs shared request budget for no benefit — cutting it short quickly
+  // leaves more of /api/turn's 60s ceiling for extraction, which carries the safety risk_flag.
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const result = await adapter.complete({ ...prompt, maxTokens: 200 });
+      const result = await adapter.complete({ ...prompt, maxTokens: 200, timeoutMs: 5_000 });
       latencyMs += result.latencyMs;
       const text = firstQuestionOnly(result.text);
 

@@ -122,6 +122,13 @@ export async function processTurn(ctx: TurnContext): Promise<TurnOutcome> {
   // §24.4: "Schema instability. Mitigation: temperature 0, enforce in code, one retry, then
   // manual path." Two attempts, then the turn is marked extraction-failed — never filled with
   // a plausible guess (§12.6 rule 3).
+  //
+  // ⚠️ This is the ONLY call that produces `risk_flag` — the LLM's independent safety signal,
+  // alongside the deterministic lexicon scan above. If this call fails to complete, risk_flag is
+  // never computed at all, for anything she said in this turn, regardless of content. That makes
+  // its timeout a safety parameter, not just a latency one: it gets a longer allowance than the
+  // shared LLM default, at the expense of probe generation below, whose output the current
+  // preset-question UI discards anyway (see generateProbe's timeoutMs override).
   for (let attempt = 1; attempt <= 2 && !extraction; attempt++) {
     try {
       const result = await adapter.complete({
@@ -130,6 +137,7 @@ export async function processTurn(ctx: TurnContext): Promise<TurnOutcome> {
         schema: EXTRACTION_JSON_SCHEMA as unknown as Record<string, unknown>,
         schemaName: "extraction",
         maxTokens: 3000,
+        timeoutMs: 20_000,
       });
       const parsed = ExtractionSchema.safeParse(parseJsonLoose(result.text));
       if (parsed.success) extraction = parsed.data;
